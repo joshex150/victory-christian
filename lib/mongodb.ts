@@ -1,7 +1,7 @@
 import { MongoClient, type Db } from "mongodb";
 
 const uri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB || "noguide";
+const dbName = process.env.MONGODB_DB;
 
 if (!uri) {
   // Defer throwing until something actually tries to use Mongo so `next build`
@@ -32,7 +32,8 @@ let indexesEnsured = false;
 
 export async function getDb(): Promise<Db> {
   const client = await clientPromise();
-  const db = client.db(dbName);
+  // If MONGODB_DB is set, use it; otherwise fall back to the db named in the URI path.
+  const db = dbName ? client.db(dbName) : client.db();
   if (!indexesEnsured) {
     indexesEnsured = true;
     await Promise.all([
