@@ -3,8 +3,5 @@ node_modules
 out
 .env.local
 .env*.local
-data/*.json
-public/uploads/*
-!public/uploads/.gitkeep
 .DS_Store
 *.log

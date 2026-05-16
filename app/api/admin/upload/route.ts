@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { getServerSession } from "@/lib/auth";
-import { saveContent } from "@/lib/storage";
+import { getContent, saveCover } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
-const ALLOWED = new Map<string, string>([
-  ["image/jpeg", "jpg"],
-  ["image/png", "png"],
-  ["image/webp", "webp"],
-  ["image/gif", "gif"],
-  ["image/avif", "avif"],
+const ALLOWED = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
 ]);
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 
@@ -33,8 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, message: "No file provided" }, { status: 400 });
   }
 
-  const ext = ALLOWED.get(file.type);
-  if (!ext) {
+  if (!ALLOWED.has(file.type)) {
     return NextResponse.json(
       { success: false, message: "Only JPG, PNG, WebP, GIF, or AVIF images are allowed." },
       { status: 400 },
@@ -47,16 +44,16 @@ export async function POST(req: Request) {
     );
   }
 
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  await fs.mkdir(uploadsDir, { recursive: true });
-
-  const filename = `cover-${Date.now()}.${ext}`;
-  const filepath = path.join(uploadsDir, filename);
-  const buf = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(filepath, buf);
-
-  const publicPath = `/uploads/${filename}`;
-  const content = await saveContent({ coverImage: publicPath });
-
-  return NextResponse.json({ success: true, path: publicPath, content });
+  try {
+    const buf = Buffer.from(await file.arrayBuffer());
+    const path = await saveCover(buf, file.type);
+    const content = await getContent();
+    return NextResponse.json({ success: true, path, content });
+  } catch (err) {
+    console.error("[upload] failed:", err);
+    return NextResponse.json(
+      { success: false, message: "Upload failed. Check the server logs." },
+      { status: 500 },
+    );
+  }
 }

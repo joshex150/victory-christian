@@ -1,9 +1,5 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const CONTENT_FILE = path.join(DATA_DIR, "content.json");
-const SUBSCRIBERS_FILE = path.join(DATA_DIR, "subscribers.json");
+import { Binary, type ObjectId } from "mongodb";
+import { getDb } from "./mongodb";
 
 export type SiteContent = {
   eyebrow: string;
@@ -17,8 +13,8 @@ export type SiteContent = {
   buttonText: string;
   privacyNote: string;
   footerText: string;
-  coverImage: string; // public path like /uploads/cover.jpg or external URL
-  releaseDate: string; // ISO or display string, optional
+  coverImage: string; // public path like /api/cover?v=<ts> or external URL
+  releaseDate: string;
 };
 
 export const DEFAULT_CONTENT: SiteContent = {
@@ -48,52 +44,94 @@ export type Subscriber = {
   ua?: string | null;
 };
 
-async function ensureDir() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-}
+type ContentDoc = SiteContent & { _id: "site" };
+type SubscriberDoc = Subscriber & { _id?: ObjectId };
+type CoverDoc = {
+  _id: "cover";
+  data: Binary;
+  contentType: string;
+  updatedAt: Date;
+};
 
-async function readJSON<T>(file: string, fallback: T): Promise<T> {
-  try {
-    const raw = await fs.readFile(file, "utf8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeJSON(file: string, value: unknown) {
-  await ensureDir();
-  await fs.writeFile(file, JSON.stringify(value, null, 2), "utf8");
-}
+/* -------- content -------- */
 
 export async function getContent(): Promise<SiteContent> {
-  const stored = await readJSON<Partial<SiteContent>>(CONTENT_FILE, {});
-  return { ...DEFAULT_CONTENT, ...stored };
+  const db = await getDb();
+  const doc = await db.collection<ContentDoc>("meta").findOne({ _id: "site" });
+  if (!doc) return { ...DEFAULT_CONTENT };
+  const { _id, ...rest } = doc;
+  void _id;
+  return { ...DEFAULT_CONTENT, ...rest };
 }
 
 export async function saveContent(patch: Partial<SiteContent>): Promise<SiteContent> {
+  const db = await getDb();
   const current = await getContent();
   const next: SiteContent = { ...current, ...patch };
-  await writeJSON(CONTENT_FILE, next);
+  await db
+    .collection<ContentDoc>("meta")
+    .updateOne({ _id: "site" }, { $set: { ...next, _id: "site" } }, { upsert: true });
   return next;
 }
 
+/* -------- subscribers -------- */
+
 export async function getSubscribers(): Promise<Subscriber[]> {
-  return readJSON<Subscriber[]>(SUBSCRIBERS_FILE, []);
+  const db = await getDb();
+  const docs = await db
+    .collection<SubscriberDoc>("subscribers")
+    .find({}, { projection: { _id: 0 } })
+    .sort({ createdAt: -1 })
+    .toArray();
+  return docs as Subscriber[];
 }
 
-export async function addSubscriber(entry: Subscriber): Promise<{ added: boolean; total: number }> {
-  const list = await getSubscribers();
-  const exists = list.some((s) => s.email.toLowerCase() === entry.email.toLowerCase());
-  if (exists) return { added: false, total: list.length };
-  list.push(entry);
-  await writeJSON(SUBSCRIBERS_FILE, list);
-  return { added: true, total: list.length };
+export async function addSubscriber(
+  entry: Subscriber,
+): Promise<{ added: boolean; total: number }> {
+  const db = await getDb();
+  const col = db.collection<SubscriberDoc>("subscribers");
+  const email = entry.email.toLowerCase();
+  try {
+    await col.insertOne({ ...entry, email });
+    const total = await col.countDocuments();
+    return { added: true, total };
+  } catch (err) {
+    const e = err as { code?: number };
+    if (e?.code === 11000) {
+      const total = await col.countDocuments();
+      return { added: false, total };
+    }
+    throw err;
+  }
 }
 
 export async function removeSubscriber(email: string): Promise<number> {
-  const list = await getSubscribers();
-  const next = list.filter((s) => s.email.toLowerCase() !== email.toLowerCase());
-  await writeJSON(SUBSCRIBERS_FILE, next);
-  return next.length;
+  const db = await getDb();
+  const col = db.collection<SubscriberDoc>("subscribers");
+  await col.deleteOne({ email: email.toLowerCase() });
+  return col.countDocuments();
+}
+
+/* -------- cover image (stored as binary in Mongo) -------- */
+
+export async function saveCover(buf: Buffer, contentType: string): Promise<string> {
+  const db = await getDb();
+  await db
+    .collection<CoverDoc>("assets")
+    .updateOne(
+      { _id: "cover" },
+      { $set: { _id: "cover", data: new Binary(buf), contentType, updatedAt: new Date() } },
+      { upsert: true },
+    );
+  const path = `/api/cover?v=${Date.now()}`;
+  await saveContent({ coverImage: path });
+  return path;
+}
+
+export async function getCover(): Promise<{ buf: Buffer; contentType: string } | null> {
+  const db = await getDb();
+  const doc = await db.collection<CoverDoc>("assets").findOne({ _id: "cover" });
+  if (!doc) return null;
+  return { buf: Buffer.from(doc.data.buffer), contentType: doc.contentType };
 }

@@ -1,6 +1,6 @@
 # No Guide to Womanhood — Waitlist site
 
-A single-page Next.js 15 / React 19 / Tailwind 4 landing page for an upcoming eBook, with an admin control panel and auto-mailing on signup.
+A single-page Next.js 15 / React 19 / Tailwind 4 landing page for an upcoming eBook, with an admin control panel, auto-mailing on signup, and MongoDB-backed persistence (Vercel-friendly).
 
 ## Features
 
@@ -9,20 +9,26 @@ A single-page Next.js 15 / React 19 / Tailwind 4 landing page for an upcoming eB
 - **Auto welcome email** via [Resend](https://resend.com) on every signup
 - **Admin panel** at `/admin`:
   - Edit headline, body, form copy, footer (with live preview)
-  - Upload or link a book cover image
+  - Upload or link a book cover image (stored in Mongo, served via `/api/cover`)
   - View / search / export / delete subscribers (CSV)
-- File-based storage (`data/*.json`) — no DB required to get started
+- **MongoDB storage** — works on Vercel, Railway, Fly, anywhere
 - JWT session cookie + middleware-protected routes
 
-## 1. Install
+## 1. Spin up a MongoDB
+
+Easiest path: [MongoDB Atlas](https://cloud.mongodb.com) free tier.
+- Create a free cluster
+- Add your IP (or `0.0.0.0/0` for Vercel)
+- Create a database user
+- Click **Connect → Drivers → Node.js** and copy the connection string
+
+## 2. Install
 
 ```bash
 npm install
 ```
 
-## 2. Configure
-
-Copy the env template and fill it in:
+## 3. Configure
 
 ```bash
 cp .env.local.example .env.local
@@ -30,6 +36,8 @@ cp .env.local.example .env.local
 
 | Variable             | What it does                                                                 |
 | -------------------- | ---------------------------------------------------------------------------- |
+| `MONGODB_URI`        | Mongo connection string from Atlas (or any Mongo instance)                   |
+| `MONGODB_DB`         | Database name (defaults to `noguide`)                                        |
 | `RESEND_API_KEY`     | API key from https://resend.com — required to actually send welcome emails  |
 | `RESEND_FROM_EMAIL`  | Verified sender, e.g. `No Guide to Womanhood <hello@yourdomain.com>`         |
 | `ADMIN_EMAIL`        | Email you log into `/admin` with                                             |
@@ -38,7 +46,7 @@ cp .env.local.example .env.local
 
 If `RESEND_API_KEY` is missing, signups still succeed and are saved — the email step is skipped silently.
 
-## 3. Run
+## 4. Run
 
 ```bash
 npm run dev
@@ -47,9 +55,22 @@ npm run dev
 - Landing page: http://localhost:3000
 - Admin login:  http://localhost:3000/admin
 
-## 4. Deploy
+## 5. Deploy to Vercel
 
-The site is a normal Next.js app and deploys cleanly to any Node host (Railway, Fly, Render, a VPS, etc.). It uses the local filesystem for content + subscribers, so **on serverless platforms with read-only filesystems (e.g. Vercel) you'll want to swap `lib/storage.ts` for a database** (Postgres, Supabase, Neon, etc.) — the interface is small and easy to port.
+1. Push this repo to GitHub.
+2. Import the repo on Vercel.
+3. Add the **same env vars** from step 3 in Vercel → Project → Settings → Environment Variables.
+4. Deploy. Subscribers, edited content, and uploaded covers all live in MongoDB, so they survive every redeploy automatically.
+
+## How the data is laid out in Mongo
+
+Database `noguide`:
+
+| Collection      | Doc shape                                                                 |
+| --------------- | ------------------------------------------------------------------------- |
+| `meta`          | Single `{ _id: "site", ...SiteContent }` doc with all editable copy       |
+| `subscribers`   | `{ email, createdAt, ip, ua }` — unique index on `email`                  |
+| `assets`        | Single `{ _id: "cover", data: Binary, contentType, updatedAt }` for cover |
 
 ## File layout
 
@@ -58,6 +79,7 @@ app/
   page.tsx                       # Landing page
   layout.tsx                     # Fonts, metadata, OG, toaster
   api/waitlist/route.ts          # Public signup endpoint
+  api/cover/route.ts             # Serves the cover image from Mongo
   admin/page.tsx                 # Admin login
   admin/dashboard/page.tsx       # Protected admin dashboard
   api/admin/*                    # Login / logout / content / upload / subscribers
@@ -66,10 +88,9 @@ components/
   WaitlistForm.tsx
   BookCover.tsx
 lib/
-  storage.ts                     # JSON file storage
+  mongodb.ts                     # Cached Mongo client (serverless-safe)
+  storage.ts                     # Content / subscribers / cover persistence
   auth.ts                        # JWT session + cookie helpers
   email.ts                       # Resend welcome email
 middleware.ts                    # Protects /admin/dashboard
-data/                            # subscribers.json + content.json (gitignored)
-public/uploads/                  # Uploaded cover images (gitignored)
 ```
