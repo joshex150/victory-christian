@@ -8,6 +8,8 @@ type Props = {
   microcopy: string;
   buttonText: string;
   privacyNote: string;
+  list?: "main" | "upcoming";
+  badge?: string;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,6 +19,8 @@ export default function WaitlistForm({
   microcopy,
   buttonText,
   privacyNote,
+  list = "main",
+  badge = "Waitlist",
 }: Props) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -38,7 +42,7 @@ export default function WaitlistForm({
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, list }),
       });
       const data = (await res.json()) as { success: boolean; message: string };
       if (!res.ok || !data.success) {
@@ -70,7 +74,7 @@ export default function WaitlistForm({
     >
       {/* decorative top tag */}
       <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-rose text-white text-[10px] tracking-[0.28em] uppercase font-medium shadow-[0_8px_20px_-6px_rgba(212,69,106,0.55)]">
-        Waitlist
+        {badge}
       </div>
 
       <h2

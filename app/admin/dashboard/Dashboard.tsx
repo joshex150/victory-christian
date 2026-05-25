@@ -6,25 +6,32 @@ import { toast } from "sonner";
 import BookCover from "@/components/BookCover";
 import type { SiteContent, Subscriber } from "@/lib/storage";
 
-type Tab = "content" | "cover" | "subscribers";
+type Tab = "content" | "cover" | "subscribers" | "upcoming";
 
 export default function Dashboard({
   adminEmail,
   initialContent,
   initialSubscribers,
+  initialUpcomingSubscribers,
 }: {
   adminEmail: string;
   initialContent: SiteContent;
   initialSubscribers: Subscriber[];
+  initialUpcomingSubscribers: Subscriber[];
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("content");
   const [content, setContent] = useState<SiteContent>(initialContent);
   const [draft, setDraft] = useState<SiteContent>(initialContent);
   const [subscribers, setSubscribers] = useState<Subscriber[]>(initialSubscribers);
+  const [upcomingSubscribers, setUpcomingSubscribers] = useState<Subscriber[]>(
+    initialUpcomingSubscribers,
+  );
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingUpcoming, setUploadingUpcoming] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const upcomingFileRef = useRef<HTMLInputElement>(null);
 
   const dirty = useMemo(
     () => JSON.stringify(draft) !== JSON.stringify(content),
@@ -65,13 +72,18 @@ export default function Dashboard({
     toast.message("Changes discarded.");
   }
 
-  async function onPickFile(e: ChangeEvent<HTMLInputElement>) {
+  async function uploadCover(
+    e: ChangeEvent<HTMLInputElement>,
+    kind: "main" | "upcoming",
+  ) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
+    const setBusy = kind === "upcoming" ? setUploadingUpcoming : setUploading;
+    setBusy(true);
     try {
       const form = new FormData();
       form.append("file", file);
+      form.append("kind", kind);
       const res = await fetch("/api/admin/upload", { method: "POST", body: form });
       const data = (await res.json()) as { success: boolean; content?: SiteContent; message?: string };
       if (!res.ok || !data.success || !data.content) {
@@ -84,32 +96,50 @@ export default function Dashboard({
     } catch {
       toast.error("Upload failed.");
     } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
+      setBusy(false);
+      const ref = kind === "upcoming" ? upcomingFileRef : fileRef;
+      if (ref.current) ref.current.value = "";
     }
+  }
+
+  function onPickFile(e: ChangeEvent<HTMLInputElement>) {
+    return uploadCover(e, "main");
+  }
+
+  function onPickUpcomingFile(e: ChangeEvent<HTMLInputElement>) {
+    return uploadCover(e, "upcoming");
   }
 
   function clearCover() {
     setDraft({ ...draft, coverImage: "" });
   }
 
-  async function refreshSubscribers() {
-    const res = await fetch("/api/admin/subscribers");
+  function clearUpcomingCover() {
+    setDraft({ ...draft, upcomingCoverImage: "" });
+  }
+
+  async function refreshSubscribers(list: "main" | "upcoming" = "main") {
+    const res = await fetch(`/api/admin/subscribers?list=${list}`);
     if (res.ok) {
       const data = (await res.json()) as { subscribers: Subscriber[] };
-      setSubscribers(data.subscribers);
+      if (list === "upcoming") setUpcomingSubscribers(data.subscribers);
+      else setSubscribers(data.subscribers);
     }
   }
 
-  async function removeSub(email: string) {
+  async function removeSub(email: string, list: "main" | "upcoming" = "main") {
     if (!confirm(`Remove ${email}?`)) return;
     const res = await fetch("/api/admin/subscribers", {
       method: "DELETE",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, list }),
     });
     if (res.ok) {
-      setSubscribers((list) => list.filter((s) => s.email !== email));
+      if (list === "upcoming") {
+        setUpcomingSubscribers((l) => l.filter((s) => s.email !== email));
+      } else {
+        setSubscribers((l) => l.filter((s) => s.email !== email));
+      }
       toast.success("Removed.");
     } else {
       toast.error("Could not remove.");
@@ -175,6 +205,7 @@ export default function Dashboard({
             [
               ["content", "Write-up"],
               ["cover", "Book cover"],
+              ["upcoming", "Upcoming book"],
               ["subscribers", "Subscribers"],
             ] as const
           ).map(([key, label]) => (
@@ -219,11 +250,31 @@ export default function Dashboard({
           />
         )}
 
+        {tab === "upcoming" && (
+          <UpcomingTab
+            draft={draft}
+            content={content}
+            setDraft={setDraft}
+            uploading={uploadingUpcoming}
+            fileRef={upcomingFileRef}
+            onPickFile={onPickUpcomingFile}
+            onCoverChange={(url) => setDraft({ ...draft, upcomingCoverImage: url })}
+            onClearCover={clearUpcomingCover}
+            dirty={dirty}
+            saving={saving}
+            onSave={saveDraft}
+            onReset={resetDraft}
+            upcomingSubscribers={upcomingSubscribers}
+            onRefreshUpcoming={() => refreshSubscribers("upcoming")}
+            onRemoveUpcoming={(email) => removeSub(email, "upcoming")}
+          />
+        )}
+
         {tab === "subscribers" && (
           <SubscribersTab
             subscribers={subscribers}
-            onRefresh={refreshSubscribers}
-            onRemove={removeSub}
+            onRefresh={() => refreshSubscribers("main")}
+            onRemove={(email) => removeSub(email, "main")}
           />
         )}
       </div>
@@ -544,6 +595,275 @@ function SubscribersTab({
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function UpcomingTab({
+  draft,
+  content,
+  setDraft,
+  uploading,
+  fileRef,
+  onPickFile,
+  onCoverChange,
+  onClearCover,
+  dirty,
+  saving,
+  onSave,
+  onReset,
+  upcomingSubscribers,
+  onRefreshUpcoming,
+  onRemoveUpcoming,
+}: {
+  draft: SiteContent;
+  content: SiteContent;
+  setDraft: (c: SiteContent) => void;
+  uploading: boolean;
+  fileRef: React.RefObject<HTMLInputElement | null>;
+  onPickFile: (e: ChangeEvent<HTMLInputElement>) => void;
+  onCoverChange: (url: string) => void;
+  onClearCover: () => void;
+  dirty: boolean;
+  saving: boolean;
+  onSave: () => void;
+  onReset: () => void;
+  upcomingSubscribers: Subscriber[];
+  onRefreshUpcoming: () => void;
+  onRemoveUpcoming: (email: string) => void;
+}) {
+  function set<K extends keyof SiteContent>(key: K, value: SiteContent[K]) {
+    setDraft({ ...draft, [key]: value });
+  }
+
+  return (
+    <div className="grid lg:grid-cols-[1fr_420px] gap-6">
+      <div className="space-y-6">
+        <div className="rounded-[18px] border border-blush-deep/60 bg-white p-6 sm:p-7">
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <h2
+                className="font-serif text-xl text-ink"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                Upcoming book
+              </h2>
+              <p className="text-xs text-mute mt-1">
+                When disabled, the public site looks exactly the same as before. Enable to
+                show a secondary section with its own waitlist.
+              </p>
+            </div>
+            <label className="inline-flex items-center gap-2 cursor-pointer select-none shrink-0">
+              <input
+                type="checkbox"
+                className="peer sr-only"
+                checked={draft.upcomingEnabled}
+                onChange={(e) => set("upcomingEnabled", e.target.checked)}
+              />
+              <span className="relative h-6 w-11 rounded-full bg-blush-deep/50 peer-checked:bg-rose-deep transition-colors">
+                <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+              </span>
+              <span className="text-sm text-ink-soft">
+                {draft.upcomingEnabled ? "Showing on site" : "Hidden"}
+              </span>
+            </label>
+          </div>
+
+          <Field label="Eyebrow" value={draft.upcomingEyebrow} onChange={(v) => set("upcomingEyebrow", v)} />
+          <Field label="Book title" value={draft.upcomingTitle} onChange={(v) => set("upcomingTitle", v)} />
+          <Field label="Author / Byline" value={draft.upcomingAuthor} onChange={(v) => set("upcomingAuthor", v)} />
+          <Field label="Release date (free text)" value={draft.upcomingReleaseDate} onChange={(v) => set("upcomingReleaseDate", v)} />
+          <Field
+            label="Subheadline"
+            value={draft.upcomingSubheadline}
+            onChange={(v) => set("upcomingSubheadline", v)}
+            multiline
+          />
+          <Field
+            label="Body"
+            value={draft.upcomingBody}
+            onChange={(v) => set("upcomingBody", v)}
+            multiline
+            rows={8}
+            help="Use blank lines to separate paragraphs."
+          />
+
+          <SectionTitle title="Upcoming waitlist form" className="mt-8" />
+          <Field
+            label="Form heading"
+            value={draft.upcomingFormHeading}
+            onChange={(v) => set("upcomingFormHeading", v)}
+          />
+          <Field
+            label="Microcopy"
+            value={draft.upcomingFormMicrocopy}
+            onChange={(v) => set("upcomingFormMicrocopy", v)}
+          />
+          <Field
+            label="Button text"
+            value={draft.upcomingButtonText}
+            onChange={(v) => set("upcomingButtonText", v)}
+          />
+        </div>
+
+        <div className="rounded-[18px] border border-blush-deep/60 bg-white p-6 sm:p-7">
+          <SectionTitle
+            title="Upcoming cover image"
+            desc="Upload a JPG, PNG, WebP, GIF, or AVIF (max 8 MB)."
+          />
+          <div
+            onClick={() => fileRef.current?.click()}
+            className="cursor-pointer rounded-[14px] border-2 border-dashed border-blush-deep bg-blush/30 hover:bg-blush/50 transition-colors p-8 text-center"
+          >
+            <div className="mx-auto h-12 w-12 rounded-full bg-white border border-blush-deep flex items-center justify-center text-rose-deep">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14" /><path d="M5 12h14" />
+              </svg>
+            </div>
+            <div className="mt-3 text-sm font-medium text-ink">
+              {uploading ? "Uploading…" : "Click to upload the upcoming cover"}
+            </div>
+            <div className="text-xs text-mute mt-1">or drag & drop a file here</div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+              className="hidden"
+              onChange={onPickFile}
+            />
+          </div>
+
+          <div className="mt-6">
+            <label className="block text-xs font-medium text-ink-soft mb-1.5">
+              Or paste an image URL
+            </label>
+            <input
+              value={draft.upcomingCoverImage}
+              onChange={(e) => onCoverChange(e.target.value)}
+              placeholder="https://…"
+              className="focus-rose w-full h-11 rounded-[10px] border border-blush-deep bg-white px-3.5 text-[15px] text-ink hover:border-rose/50 transition-colors"
+            />
+            <div className="mt-2 flex justify-between items-center">
+              <p className="text-xs text-mute">Either upload, or point to an externally-hosted image.</p>
+              {draft.upcomingCoverImage && (
+                <button
+                  type="button"
+                  onClick={onClearCover}
+                  className="text-xs text-rose-deep hover:underline"
+                >
+                  Remove image
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[18px] border border-blush-deep/60 bg-white p-6 sm:p-7">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+            <SectionTitle
+              title="Upcoming-list subscribers"
+              desc={`${upcomingSubscribers.length} total`}
+              className="m-0"
+            />
+            <div className="flex items-center gap-2">
+              <a
+                href="/api/admin/subscribers?list=upcoming&format=csv"
+                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[10px] border border-blush-deep bg-white text-sm text-ink-soft hover:border-rose/50 transition-colors"
+              >
+                Export CSV
+              </a>
+              <button
+                onClick={onRefreshUpcoming}
+                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[10px] border border-blush-deep bg-white text-sm text-ink-soft hover:border-rose/50 transition-colors"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          {upcomingSubscribers.length === 0 ? (
+            <p className="py-10 text-center text-mute text-sm">No upcoming-list subscribers yet.</p>
+          ) : (
+            <div className="overflow-hidden rounded-[12px] border border-blush-deep/60">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-blush/40 text-ink-soft text-left">
+                    <th className="font-medium px-4 py-2.5">Email</th>
+                    <th className="font-medium px-4 py-2.5 hidden sm:table-cell">Joined</th>
+                    <th className="font-medium px-4 py-2.5 w-16" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcomingSubscribers.map((s) => (
+                    <tr key={s.email} className="border-t border-blush-deep/40">
+                      <td className="px-4 py-3 text-ink truncate">{s.email}</td>
+                      <td className="px-4 py-3 text-mute hidden sm:table-cell">
+                        {new Date(s.createdAt).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => onRemoveUpcoming(s.email)}
+                          className="text-rose-deep hover:underline text-xs"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <aside className="lg:sticky lg:top-24 self-start space-y-5">
+        <div className="rounded-[18px] border border-blush-deep/60 bg-gradient-to-br from-blush/50 to-white p-6">
+          <div className="text-[11px] tracking-[0.24em] uppercase text-rose-deep mb-5 text-center">
+            Live preview
+          </div>
+          <div className="flex justify-center py-2">
+            <BookCover
+              title={draft.upcomingTitle || "Upcoming title"}
+              author={draft.upcomingAuthor}
+              image={draft.upcomingCoverImage}
+            />
+          </div>
+          <div className="mt-5 rounded-[14px] bg-white p-4 border border-blush-deep/50">
+            <div className="text-[10px] tracking-[0.28em] uppercase text-rose-deep">
+              {draft.upcomingEyebrow || "Coming soon"}
+            </div>
+            <h3
+              className="mt-2 font-serif text-xl leading-tight text-ink"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              {draft.upcomingTitle || "Untitled"}
+            </h3>
+            {draft.upcomingSubheadline && (
+              <p
+                className="mt-1 font-serif italic text-mute text-sm"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                {draft.upcomingSubheadline}
+              </p>
+            )}
+            <p className="mt-2 text-[12.5px] text-ink-soft line-clamp-5 whitespace-pre-line">
+              {draft.upcomingBody}
+            </p>
+          </div>
+          {!draft.upcomingEnabled && (
+            <p className="mt-4 text-center text-xs text-mute">
+              Section is hidden on the public site. Toggle above to publish.
+            </p>
+          )}
+          {content.upcomingCoverImage !== draft.upcomingCoverImage && (
+            <p className="mt-3 text-center text-xs text-rose-deep">
+              Unsaved cover change — click Save to publish.
+            </p>
+          )}
+        </div>
+        <SaveBar dirty={dirty} saving={saving} onSave={onSave} onReset={onReset} />
+      </aside>
     </div>
   );
 }

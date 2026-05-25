@@ -9,13 +9,18 @@ export default async function DashboardPage() {
   const session = await getServerSession();
   if (!session) redirect("/admin");
 
-  const [content, subscribers] = await Promise.all([getContent(), getSubscribers()]);
+  const [content, subscribers, upcomingSubscribers] = await Promise.all([
+    getContent(),
+    getSubscribers("main"),
+    getSubscribers("upcoming"),
+  ]);
 
   return (
     <Dashboard
       adminEmail={session.email}
       initialContent={content}
       initialSubscribers={subscribers}
+      initialUpcomingSubscribers={upcomingSubscribers}
     />
   );
 }

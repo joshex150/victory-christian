@@ -12,7 +12,8 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const format = url.searchParams.get("format");
-  const list = await getSubscribers();
+  const listParam = url.searchParams.get("list") === "upcoming" ? "upcoming" : "main";
+  const list = await getSubscribers(listParam);
 
   if (format === "csv") {
     const header = "email,createdAt\n";
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="subscribers-${Date.now()}.csv"`,
+        "Content-Disposition": `attachment; filename="${listParam}-subscribers-${Date.now()}.csv"`,
       },
     });
   }
@@ -36,9 +37,9 @@ export async function DELETE(req: Request) {
   if (!session) {
     return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   }
-  let json: { email?: string };
+  let json: { email?: string; list?: string };
   try {
-    json = (await req.json()) as { email?: string };
+    json = (await req.json()) as { email?: string; list?: string };
   } catch {
     return NextResponse.json({ success: false, message: "Invalid JSON" }, { status: 400 });
   }
@@ -46,7 +47,8 @@ export async function DELETE(req: Request) {
   if (!email) {
     return NextResponse.json({ success: false, message: "Email required" }, { status: 400 });
   }
-  const total = await removeSubscriber(email);
+  const list = json.list === "upcoming" ? "upcoming" : "main";
+  const total = await removeSubscriber(email, list);
   return NextResponse.json({ success: true, total });
 }
 

@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 
 const Body = z.object({
   email: z.string().trim().toLowerCase().email("Please enter a valid email address."),
+  list: z.enum(["main", "upcoming"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { email } = parsed.data;
+  const { email, list = "main" } = parsed.data;
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
@@ -39,12 +40,15 @@ export async function POST(req: Request) {
   const ua = req.headers.get("user-agent");
 
   try {
-    const result = await addSubscriber({
-      email,
-      createdAt: new Date().toISOString(),
-      ip,
-      ua,
-    });
+    const result = await addSubscriber(
+      {
+        email,
+        createdAt: new Date().toISOString(),
+        ip,
+        ua,
+      },
+      list,
+    );
 
     if (!result.added) {
       return NextResponse.json({
@@ -54,10 +58,13 @@ export async function POST(req: Request) {
     }
 
     // Fire-and-handle: don't block the user on email outcome, but log issues.
-    const content = await getContent();
-    const mail = await sendWelcomeEmail(email, content);
-    if (!mail.ok && !mail.skipped) {
-      console.warn("[waitlist] welcome email failed:", mail.error);
+    // Welcome email copy is keyed to the main book, so only send for the main list.
+    if (list === "main") {
+      const content = await getContent();
+      const mail = await sendWelcomeEmail(email, content);
+      if (!mail.ok && !mail.skipped) {
+        console.warn("[waitlist] welcome email failed:", mail.error);
+      }
     }
 
     return NextResponse.json({

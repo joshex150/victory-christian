@@ -31,6 +31,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, message: "No file provided" }, { status: 400 });
   }
 
+  const kindRaw = form.get("kind");
+  const kind = kindRaw === "upcoming" ? "upcoming" : "main";
+
   if (!ALLOWED.has(file.type)) {
     return NextResponse.json(
       { success: false, message: "Only JPG, PNG, WebP, GIF, or AVIF images are allowed." },
@@ -46,7 +49,7 @@ export async function POST(req: Request) {
 
   try {
     const buf = Buffer.from(await file.arrayBuffer());
-    const path = await saveCover(buf, file.type);
+    const path = await saveCover(buf, file.type, kind);
     const content = await getContent();
     return NextResponse.json({ success: true, path, content });
   } catch (err) {

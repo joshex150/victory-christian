@@ -15,6 +15,20 @@ export type SiteContent = {
   footerText: string;
   coverImage: string; // public path like /api/cover?v=<ts> or external URL
   releaseDate: string;
+
+  // Secondary "upcoming book" — hidden by default; when disabled the
+  // landing page renders exactly as before.
+  upcomingEnabled: boolean;
+  upcomingEyebrow: string;
+  upcomingTitle: string;
+  upcomingAuthor: string;
+  upcomingSubheadline: string;
+  upcomingBody: string;
+  upcomingCoverImage: string;
+  upcomingReleaseDate: string;
+  upcomingFormHeading: string;
+  upcomingFormMicrocopy: string;
+  upcomingButtonText: string;
 };
 
 export const DEFAULT_CONTENT: SiteContent = {
@@ -35,23 +49,42 @@ It's not a guide to being a woman, but the clarity you wish you had earlier. Bec
   footerText: "Built for readers who are ready to break the pattern.",
   coverImage: "",
   releaseDate: "",
+
+  upcomingEnabled: false,
+  upcomingEyebrow: "Coming soon",
+  upcomingTitle: "",
+  upcomingAuthor: "",
+  upcomingSubheadline: "",
+  upcomingBody: "",
+  upcomingCoverImage: "",
+  upcomingReleaseDate: "",
+  upcomingFormHeading: "Be first to know when it drops.",
+  upcomingFormMicrocopy: "Join the early-access list for this upcoming title.",
+  upcomingButtonText: "Notify me",
 };
+
+export type SubscriberList = "main" | "upcoming";
 
 export type Subscriber = {
   email: string;
   createdAt: string;
   ip?: string | null;
   ua?: string | null;
+  list?: SubscriberList;
 };
 
 type ContentDoc = SiteContent & { _id: "site" };
 type SubscriberDoc = Subscriber & { _id?: ObjectId };
 type CoverDoc = {
-  _id: "cover";
+  _id: "cover" | "upcoming-cover";
   data: Binary;
   contentType: string;
   updatedAt: Date;
 };
+
+function subscribersCollection(list: SubscriberList) {
+  return list === "upcoming" ? "upcoming_subscribers" : "subscribers";
+}
 
 /* -------- content -------- */
 
@@ -76,10 +109,10 @@ export async function saveContent(patch: Partial<SiteContent>): Promise<SiteCont
 
 /* -------- subscribers -------- */
 
-export async function getSubscribers(): Promise<Subscriber[]> {
+export async function getSubscribers(list: SubscriberList = "main"): Promise<Subscriber[]> {
   const db = await getDb();
   const docs = await db
-    .collection<SubscriberDoc>("subscribers")
+    .collection<SubscriberDoc>(subscribersCollection(list))
     .find({}, { projection: { _id: 0 } })
     .sort({ createdAt: -1 })
     .toArray();
@@ -88,12 +121,13 @@ export async function getSubscribers(): Promise<Subscriber[]> {
 
 export async function addSubscriber(
   entry: Subscriber,
+  list: SubscriberList = "main",
 ): Promise<{ added: boolean; total: number }> {
   const db = await getDb();
-  const col = db.collection<SubscriberDoc>("subscribers");
+  const col = db.collection<SubscriberDoc>(subscribersCollection(list));
   const email = entry.email.toLowerCase();
   try {
-    await col.insertOne({ ...entry, email });
+    await col.insertOne({ ...entry, email, list });
     const total = await col.countDocuments();
     return { added: true, total };
   } catch (err) {
@@ -106,32 +140,51 @@ export async function addSubscriber(
   }
 }
 
-export async function removeSubscriber(email: string): Promise<number> {
+export async function removeSubscriber(
+  email: string,
+  list: SubscriberList = "main",
+): Promise<number> {
   const db = await getDb();
-  const col = db.collection<SubscriberDoc>("subscribers");
+  const col = db.collection<SubscriberDoc>(subscribersCollection(list));
   await col.deleteOne({ email: email.toLowerCase() });
   return col.countDocuments();
 }
 
 /* -------- cover image (stored as binary in Mongo) -------- */
 
-export async function saveCover(buf: Buffer, contentType: string): Promise<string> {
+export type CoverKind = "main" | "upcoming";
+
+function coverDocId(kind: CoverKind): "cover" | "upcoming-cover" {
+  return kind === "upcoming" ? "upcoming-cover" : "cover";
+}
+
+export async function saveCover(
+  buf: Buffer,
+  contentType: string,
+  kind: CoverKind = "main",
+): Promise<string> {
   const db = await getDb();
+  const id = coverDocId(kind);
   await db
     .collection<CoverDoc>("assets")
     .updateOne(
-      { _id: "cover" },
-      { $set: { _id: "cover", data: new Binary(buf), contentType, updatedAt: new Date() } },
+      { _id: id },
+      { $set: { _id: id, data: new Binary(buf), contentType, updatedAt: new Date() } },
       { upsert: true },
     );
-  const path = `/api/cover?v=${Date.now()}`;
-  await saveContent({ coverImage: path });
+  const path =
+    kind === "upcoming"
+      ? `/api/cover/upcoming?v=${Date.now()}`
+      : `/api/cover?v=${Date.now()}`;
+  await saveContent(kind === "upcoming" ? { upcomingCoverImage: path } : { coverImage: path });
   return path;
 }
 
-export async function getCover(): Promise<{ buf: Buffer; contentType: string } | null> {
+export async function getCover(
+  kind: CoverKind = "main",
+): Promise<{ buf: Buffer; contentType: string } | null> {
   const db = await getDb();
-  const doc = await db.collection<CoverDoc>("assets").findOne({ _id: "cover" });
+  const doc = await db.collection<CoverDoc>("assets").findOne({ _id: coverDocId(kind) });
   if (!doc) return null;
   return { buf: Buffer.from(doc.data.buffer), contentType: doc.contentType };
 }

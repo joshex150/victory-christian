@@ -20,6 +20,18 @@ const Patch = z
     footerText: z.string().max(240).optional(),
     coverImage: z.string().max(2000).optional(),
     releaseDate: z.string().max(60).optional(),
+
+    upcomingEnabled: z.boolean().optional(),
+    upcomingEyebrow: z.string().max(80).optional(),
+    upcomingTitle: z.string().max(140).optional(),
+    upcomingAuthor: z.string().max(140).optional(),
+    upcomingSubheadline: z.string().max(280).optional(),
+    upcomingBody: z.string().max(6000).optional(),
+    upcomingCoverImage: z.string().max(2000).optional(),
+    upcomingReleaseDate: z.string().max(60).optional(),
+    upcomingFormHeading: z.string().max(160).optional(),
+    upcomingFormMicrocopy: z.string().max(160).optional(),
+    upcomingButtonText: z.string().max(40).optional(),
   })
   .strict();
 

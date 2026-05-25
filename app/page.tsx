@@ -1,4 +1,5 @@
 import LandingHero from "@/components/LandingHero";
+import UpcomingSection from "@/components/UpcomingSection";
 import WaitlistForm from "@/components/WaitlistForm";
 import { getContent } from "@/lib/storage";
 
@@ -44,6 +45,8 @@ export default async function Home() {
             privacyNote={content.privacyNote}
           />
         </div>
+
+        {content.upcomingEnabled && <UpcomingSection content={content} />}
 
         <footer className="mt-16 sm:mt-20 text-center">
           <p
