@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const cover = await getCover("upcoming");
+    const cover = await getCover("book:upcoming");
     if (!cover) {
       return NextResponse.json({ error: "No cover" }, { status: 404 });
     }

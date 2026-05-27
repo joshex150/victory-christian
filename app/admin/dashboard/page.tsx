@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
-import { getContent, getEmailTemplate, getSiteTheme, getSubscribers } from "@/lib/storage";
+import {
+  bookSubscriberList,
+  getContent,
+  getEmailTemplate,
+  getSiteTheme,
+  getSubscribers,
+} from "@/lib/storage";
 import Dashboard from "./Dashboard";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +20,7 @@ export default async function DashboardPage() {
     getSiteTheme(),
     getEmailTemplate(),
     getSubscribers("main"),
-    getSubscribers("upcoming"),
+    getSubscribers(bookSubscriberList("upcoming")),
   ]);
 
   return (

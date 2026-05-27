@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
-import { getSubscribers, removeSubscriber } from "@/lib/storage";
+import { bookSubscriberList, getSubscribers, removeSubscriber } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -13,7 +13,8 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const format = url.searchParams.get("format");
   const listParam = url.searchParams.get("list") === "upcoming" ? "upcoming" : "main";
-  const list = await getSubscribers(listParam);
+  const subscriberList = listParam === "upcoming" ? bookSubscriberList("upcoming") : "main";
+  const list = await getSubscribers(subscriberList);
 
   if (format === "csv") {
     const header = "email,createdAt\n";
@@ -47,7 +48,7 @@ export async function DELETE(req: Request) {
   if (!email) {
     return NextResponse.json({ success: false, message: "Email required" }, { status: 400 });
   }
-  const list = json.list === "upcoming" ? "upcoming" : "main";
+  const list = json.list === "upcoming" ? bookSubscriberList("upcoming") : "main";
   const total = await removeSubscriber(email, list);
   return NextResponse.json({ success: true, total });
 }

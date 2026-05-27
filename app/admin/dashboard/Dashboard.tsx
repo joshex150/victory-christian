@@ -66,10 +66,12 @@ export default function Dashboard({
   async function saveDraft() {
     setSaving(true);
     try {
+      const { upcomingBooks: _reservedUpcomingBooks, ...contentPatch } = draft;
+      void _reservedUpcomingBooks;
       const res = await fetch("/api/admin/content", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify(contentPatch),
       });
       const data = (await res.json()) as { success: boolean; content?: SiteContent; message?: string };
       if (!res.ok || !data.success || !data.content) {
@@ -1106,6 +1108,26 @@ function UpcomingTab({
   }
 
   const visibilityChanged = draft.upcomingEnabled !== content.upcomingEnabled;
+  const [subscriberQuery, setSubscriberQuery] = useState("");
+  const filteredUpcomingSubscribers = useMemo(
+    () =>
+      subscriberQuery
+        ? upcomingSubscribers.filter((subscriber) =>
+            subscriber.email.toLowerCase().includes(subscriberQuery.toLowerCase()),
+          )
+        : upcomingSubscribers,
+    [subscriberQuery, upcomingSubscribers],
+  );
+  const emailContent: SiteContent = {
+    ...draft,
+    bookTitle: draft.upcomingTitle || "Upcoming book",
+    subheadline: draft.upcomingSubheadline,
+  };
+  const upcomingEmail = draft.upcomingEmailTemplate;
+
+  function setUpcomingEmail<K extends keyof EmailTemplate>(key: K, value: EmailTemplate[K]) {
+    set("upcomingEmailTemplate", { ...upcomingEmail, [key]: value });
+  }
 
   return (
     <div className="grid lg:grid-cols-[1fr_420px] gap-6">
@@ -1325,6 +1347,35 @@ function UpcomingTab({
         </div>
 
         <div className="rounded-[18px] border border-blush-deep/60 bg-surface p-6 sm:p-7">
+          <SectionTitle
+            title="Upcoming signup email"
+            desc="Sent only to readers who join this upcoming-book waitlist."
+          />
+          <Field label="Subject" value={upcomingEmail.subject} onChange={(v) => setUpcomingEmail("subject", v)} />
+          <Field label="Eyebrow" value={upcomingEmail.eyebrow} onChange={(v) => setUpcomingEmail("eyebrow", v)} />
+          <Field label="Heading" value={upcomingEmail.heading} onChange={(v) => setUpcomingEmail("heading", v)} />
+          <Field label="Subtitle" value={upcomingEmail.subtitle} onChange={(v) => setUpcomingEmail("subtitle", v)} />
+          <Field label="Opening" value={upcomingEmail.intro} onChange={(v) => setUpcomingEmail("intro", v)} multiline />
+          <Field label="Message" value={upcomingEmail.message} onChange={(v) => setUpcomingEmail("message", v)} multiline rows={4} />
+          <Field label="Signoff" value={upcomingEmail.signoff} onChange={(v) => setUpcomingEmail("signoff", v)} multiline />
+          <Field label="Footer note" value={upcomingEmail.footer} onChange={(v) => setUpcomingEmail("footer", v)} multiline />
+          <p className="mb-6 text-xs text-mute">
+            Dynamic fields: {"{{bookTitle}}"}, {"{{subheadline}}"}, {"{{footerText}}"}
+          </p>
+          <SectionTitle title="Upcoming email colors" />
+          <div className="grid sm:grid-cols-2 gap-3">
+            {EMAIL_COLORS.map(({ key, label }) => (
+              <ColorField
+                key={key}
+                label={label}
+                value={upcomingEmail[key]}
+                onChange={(value) => setUpcomingEmail(key, value)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[18px] border border-blush-deep/60 bg-surface p-6 sm:p-7">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <SectionTitle
               title="Upcoming-list subscribers"
@@ -1347,8 +1398,17 @@ function UpcomingTab({
             </div>
           </div>
 
-          {upcomingSubscribers.length === 0 ? (
-            <p className="py-10 text-center text-mute text-sm">No upcoming-list subscribers yet.</p>
+          <input
+            value={subscriberQuery}
+            onChange={(e) => setSubscriberQuery(e.target.value)}
+            placeholder="Search upcoming subscribers by email"
+            className="focus-rose w-full h-11 rounded-[10px] border border-blush-deep bg-input px-3.5 text-[15px] text-ink hover:border-rose/50 transition-colors mb-5"
+          />
+
+          {filteredUpcomingSubscribers.length === 0 ? (
+            <p className="py-10 text-center text-mute text-sm">
+              {upcomingSubscribers.length === 0 ? "No upcoming-list subscribers yet." : "No matches."}
+            </p>
           ) : (
             <div className="overflow-hidden rounded-[12px] border border-blush-deep/60">
               <table className="w-full text-sm">
@@ -1360,7 +1420,7 @@ function UpcomingTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {upcomingSubscribers.map((s) => (
+                  {filteredUpcomingSubscribers.map((s) => (
                     <tr key={s.email} className="border-t border-blush-deep/40">
                       <td className="px-4 py-3 text-ink truncate">{s.email}</td>
                       <td className="px-4 py-3 text-mute hidden sm:table-cell">
@@ -1429,6 +1489,51 @@ function UpcomingTab({
               Unsaved cover change — click Save to publish.
             </p>
           )}
+        </div>
+        <div
+          className="rounded-[18px] border border-blush-deep/60 p-4 sm:p-5"
+          style={{ background: upcomingEmail.background }}
+        >
+          <div className="text-[11px] text-mute mb-3 truncate">
+            Subject: {fillTemplate(upcomingEmail.subject, emailContent)}
+          </div>
+          <div
+            className="rounded-[14px] overflow-hidden border"
+            style={{ background: upcomingEmail.surface, borderColor: upcomingEmail.border }}
+          >
+            <div
+              className="px-5 py-5 border-b"
+              style={{ background: upcomingEmail.headerBackground, borderColor: upcomingEmail.border }}
+            >
+              <div className="text-[10px] font-semibold uppercase" style={{ color: upcomingEmail.accent }}>
+                {fillTemplate(upcomingEmail.eyebrow, emailContent)}
+              </div>
+              <h3
+                className="mt-2 font-serif text-2xl leading-tight"
+                style={{ color: upcomingEmail.headingText, fontFamily: "var(--font-serif)" }}
+              >
+                {fillTemplate(upcomingEmail.heading, emailContent)}
+              </h3>
+              <p className="mt-1 text-xs" style={{ color: upcomingEmail.mutedText }}>
+                {fillTemplate(upcomingEmail.subtitle, emailContent)}
+              </p>
+            </div>
+            <div className="p-5 space-y-3 text-sm leading-relaxed" style={{ color: upcomingEmail.bodyText }}>
+              <p className="whitespace-pre-line">{fillTemplate(upcomingEmail.intro, emailContent)}</p>
+              <p className="whitespace-pre-line">{fillTemplate(upcomingEmail.message, emailContent)}</p>
+              <p className="whitespace-pre-line">{fillTemplate(upcomingEmail.signoff, emailContent)}</p>
+              <div className="h-px" style={{ background: upcomingEmail.border }} />
+              <p className="text-xs whitespace-pre-line" style={{ color: upcomingEmail.mutedText }}>
+                {fillTemplate(upcomingEmail.footer, emailContent)}
+              </p>
+            </div>
+          </div>
+          <p
+            className="mt-3 text-center font-serif italic text-xs"
+            style={{ color: upcomingEmail.mutedText, fontFamily: "var(--font-serif)" }}
+          >
+            {draft.footerText}
+          </p>
         </div>
         <SaveBar dirty={dirty} saving={saving} onSave={onSave} onReset={onReset} />
       </aside>

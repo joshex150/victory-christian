@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { addSubscriber, getContent, getEmailTemplate } from "@/lib/storage";
+import { addSubscriber, bookSubscriberList, getContent, getEmailTemplate } from "@/lib/storage";
 import { sendWelcomeEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         ip,
         ua,
       },
-      list,
+      list === "main" ? "main" : bookSubscriberList("upcoming"),
     );
 
     if (!result.added) {
@@ -74,14 +74,20 @@ export async function POST(req: Request) {
       });
     }
 
-    // Fire-and-handle: don't block the user on email outcome, but log issues.
-    // Welcome email copy is keyed to the main book, so only send for the main list.
-    if (list === "main") {
-      const template = await getEmailTemplate();
-      const mail = await sendWelcomeEmail(email, content, template);
-      if (!mail.ok && !mail.skipped) {
-        console.warn("[waitlist] welcome email failed:", mail.error);
-      }
+    // Do not block a successful signup on the external mail service.
+    const emailContent =
+      list === "main"
+        ? content
+        : {
+            ...content,
+            bookTitle: content.upcomingTitle || "Upcoming book",
+            subheadline: content.upcomingSubheadline,
+          };
+    const template =
+      list === "main" ? await getEmailTemplate() : content.upcomingEmailTemplate;
+    const mail = await sendWelcomeEmail(email, emailContent, template);
+    if (!mail.ok && !mail.skipped) {
+      console.warn(`[waitlist:${list}] welcome email failed:`, mail.error);
     }
 
     return NextResponse.json({

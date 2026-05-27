@@ -5,6 +5,29 @@ import { getContent, saveContent } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
+const Hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Choose a valid six-digit hex color.");
+
+const EmailTemplateInput = z
+  .object({
+    subject: z.string().min(1).max(180),
+    eyebrow: z.string().min(1).max(100),
+    heading: z.string().min(1).max(180),
+    subtitle: z.string().max(300),
+    intro: z.string().min(1).max(500),
+    message: z.string().min(1).max(1600),
+    signoff: z.string().min(1).max(800),
+    footer: z.string().min(1).max(1000),
+    background: Hex,
+    surface: Hex,
+    headerBackground: Hex,
+    border: Hex,
+    accent: Hex,
+    headingText: Hex,
+    bodyText: Hex,
+    mutedText: Hex,
+  })
+  .strict();
+
 const Patch = z
   .object({
     metadataTitle: z.string().max(140).optional(),
@@ -63,6 +86,7 @@ const Patch = z
     upcomingFormGenericErrorMessage: z.string().max(160).optional(),
     upcomingFormSuccessMessage: z.string().max(160).optional(),
     upcomingFormExistingMessage: z.string().max(160).optional(),
+    upcomingEmailTemplate: EmailTemplateInput.optional(),
   })
   .strict();
 

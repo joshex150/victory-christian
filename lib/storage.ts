@@ -2,6 +2,7 @@ import { Binary, type ObjectId } from "mongodb";
 import { getDb } from "./mongodb";
 import {
   DEFAULT_EMAIL_TEMPLATE,
+  DEFAULT_UPCOMING_EMAIL_TEMPLATE,
   DEFAULT_SITE_THEME,
   type EmailTemplate,
   type SiteTheme,
@@ -66,6 +67,7 @@ export type SiteContent = {
   upcomingFormGenericErrorMessage: string;
   upcomingFormSuccessMessage: string;
   upcomingFormExistingMessage: string;
+  upcomingEmailTemplate: EmailTemplate;
   upcomingBooks: UpcomingBook[];
 };
 
@@ -159,6 +161,7 @@ It's not a guide to being a woman, but the clarity you wish you had earlier. Bec
   upcomingFormGenericErrorMessage: "Something went wrong. Please try again.",
   upcomingFormSuccessMessage: "You're on the list. Check your inbox.",
   upcomingFormExistingMessage: "You're already on the list. We'll be in touch.",
+  upcomingEmailTemplate: { ...DEFAULT_UPCOMING_EMAIL_TEMPLATE },
   upcomingBooks: [],
 };
 
@@ -241,7 +244,7 @@ function legacyUpcomingBook(content: SiteContent): UpcomingBook | null {
     formGenericErrorMessage: content.upcomingFormGenericErrorMessage,
     formSuccessMessage: content.upcomingFormSuccessMessage,
     formExistingMessage: content.upcomingFormExistingMessage,
-    emailTemplate: { ...DEFAULT_EMAIL_TEMPLATE },
+    emailTemplate: { ...content.upcomingEmailTemplate },
   };
 }
 
@@ -261,6 +264,10 @@ export async function getContent(): Promise<SiteContent> {
   const { _id, ...rest } = doc;
   void _id;
   const content: SiteContent = { ...DEFAULT_CONTENT, ...rest };
+  content.upcomingEmailTemplate = {
+    ...DEFAULT_UPCOMING_EMAIL_TEMPLATE,
+    ...rest.upcomingEmailTemplate,
+  };
   if (Array.isArray(rest.upcomingBooks)) {
     content.upcomingBooks = rest.upcomingBooks
       .filter((book) => isBookId(book.id))
@@ -405,6 +412,15 @@ export async function saveCover(
   } else {
     const bookId = kind.slice("book:".length);
     const content = await getContent();
+    if (bookId === "upcoming") {
+      await saveContent({
+        upcomingCoverImage: path,
+        upcomingBooks: content.upcomingBooks.map((book) =>
+          book.id === bookId ? { ...book, coverImage: path } : book,
+        ),
+      });
+      return path;
+    }
     if (!content.upcomingBooks.some((book) => book.id === bookId)) {
       throw new Error("Save the upcoming book before uploading its cover.");
     }

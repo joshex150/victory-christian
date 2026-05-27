@@ -112,6 +112,18 @@ export const DEFAULT_EMAIL_TEMPLATE: EmailTemplate = {
   mutedText: "#76636a",
 };
 
+export const DEFAULT_UPCOMING_EMAIL_TEMPLATE: EmailTemplate = {
+  ...DEFAULT_EMAIL_TEMPLATE,
+  subject: "You're on the early-access list - {{bookTitle}}",
+  eyebrow: "Early access confirmed",
+  intro: "Thank you for joining the early-access list.",
+  message:
+    "You'll be among the first to hear when {{bookTitle}} is ready. We'll send a quiet update when there is news worth sharing.",
+  signoff: "Until then, thank you for making room for what comes next.",
+  footer:
+    "You're receiving this because you asked for updates about {{bookTitle}}. If this wasn't you, simply ignore this email.",
+};
+
 type TemplateValues = {
   bookTitle: string;
   subheadline: string;

@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   }
 
   const kindRaw = form.get("kind");
-  const kind = kindRaw === "upcoming" ? "upcoming" : "main";
+  const kind = kindRaw === "upcoming" ? "book:upcoming" : "main";
 
   if (!ALLOWED.has(file.type)) {
     return NextResponse.json(
