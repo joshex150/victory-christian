@@ -96,7 +96,7 @@ export const DEFAULT_EMAIL_TEMPLATE: EmailTemplate = {
   eyebrow: "You're on the list",
   heading: "{{bookTitle}}",
   subtitle: "{{subheadline}}",
-  intro: "Thank you for joining the waitlist.",
+  intro: "Hi {{firstName}}, thank you for joining the waitlist.",
   message:
     "You'll be among the first to know when {{bookTitle}} drops. No spam, no noise - just one quiet note when it's time.",
   signoff: "Until then: take care of her - the version of you who's still learning.",
@@ -116,7 +116,7 @@ export const DEFAULT_UPCOMING_EMAIL_TEMPLATE: EmailTemplate = {
   ...DEFAULT_EMAIL_TEMPLATE,
   subject: "You're on the early-access list - {{bookTitle}}",
   eyebrow: "Early access confirmed",
-  intro: "Thank you for joining the early-access list.",
+  intro: "Hi {{firstName}}, thank you for joining the early-access list.",
   message:
     "You'll be among the first to hear when {{bookTitle}} is ready. We'll send a quiet update when there is news worth sharing.",
   signoff: "Until then, thank you for making room for what comes next.",
@@ -128,11 +128,13 @@ type TemplateValues = {
   bookTitle: string;
   subheadline: string;
   footerText: string;
+  firstName?: string;
 };
 
 export function fillTemplate(value: string, content: TemplateValues) {
   return value
     .replaceAll("{{bookTitle}}", content.bookTitle)
     .replaceAll("{{subheadline}}", content.subheadline)
-    .replaceAll("{{footerText}}", content.footerText);
+    .replaceAll("{{footerText}}", content.footerText)
+    .replaceAll("{{firstName}}", content.firstName?.trim() || "there");
 }

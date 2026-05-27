@@ -475,6 +475,17 @@ function ContentTab({
         <SectionTitle title="Waitlist form" className="mt-8" />
         <Field label="Badge" value={draft.formBadge} onChange={(v) => set("formBadge", v)} />
         <Field
+          label="Name field label"
+          value={draft.formNameLabel}
+          onChange={(v) => set("formNameLabel", v)}
+        />
+        <Field
+          label="Name placeholder"
+          value={draft.formNamePlaceholder}
+          onChange={(v) => set("formNamePlaceholder", v)}
+          help="Keep this soft. The public field is optional to reduce friction."
+        />
+        <Field
           label="Email field label"
           value={draft.formEmailLabel}
           onChange={(v) => set("formEmailLabel", v)}
@@ -915,7 +926,7 @@ function EmailTemplateTab({
           <Field label="Signoff" value={draft.signoff} onChange={(v) => set("signoff", v)} multiline />
           <Field label="Footer note" value={draft.footer} onChange={(v) => set("footer", v)} multiline />
           <p className="text-xs text-mute">
-            Dynamic fields: {"{{bookTitle}}"}, {"{{subheadline}}"}, {"{{footerText}}"}
+            Dynamic fields: {"{{firstName}}"}, {"{{bookTitle}}"}, {"{{subheadline}}"}, {"{{footerText}}"}
           </p>
         </div>
         <div className="rounded-[18px] border border-blush-deep/60 bg-surface p-6 sm:p-7">
@@ -1001,7 +1012,7 @@ function SubscribersTab({
     () =>
       q
         ? subscribers.filter((s) =>
-            s.email.toLowerCase().includes(q.toLowerCase()),
+            `${s.name ?? ""} ${s.email}`.toLowerCase().includes(q.toLowerCase()),
           )
         : subscribers,
     [q, subscribers],
@@ -1033,7 +1044,7 @@ function SubscribersTab({
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search by email…"
+        placeholder="Search by name or email..."
         className="focus-rose w-full h-11 rounded-[10px] border border-blush-deep bg-input px-3.5 text-[15px] text-ink hover:border-rose/50 transition-colors mb-5"
       />
 
@@ -1054,6 +1065,7 @@ function SubscribersTab({
             <thead>
               <tr className="bg-blush/40 text-ink-soft text-left">
                 <th className="font-medium px-4 py-2.5">Email</th>
+                <th className="font-medium px-4 py-2.5 hidden md:table-cell">Name</th>
                 <th className="font-medium px-4 py-2.5 hidden sm:table-cell">Joined</th>
                 <th className="font-medium px-4 py-2.5 w-16" />
               </tr>
@@ -1062,6 +1074,9 @@ function SubscribersTab({
               {filtered.map((s) => (
                 <tr key={s.email} className="border-t border-blush-deep/40">
                   <td className="px-4 py-3 text-ink truncate">{s.email}</td>
+                  <td className="px-4 py-3 text-mute hidden md:table-cell truncate">
+                    {s.name || "-"}
+                  </td>
                   <td className="px-4 py-3 text-mute hidden sm:table-cell">
                     {new Date(s.createdAt).toLocaleString()}
                   </td>
@@ -1126,7 +1141,9 @@ function UpcomingTab({
     () =>
       subscriberQuery
         ? upcomingSubscribers.filter((subscriber) =>
-            subscriber.email.toLowerCase().includes(subscriberQuery.toLowerCase()),
+            `${subscriber.name ?? ""} ${subscriber.email}`
+              .toLowerCase()
+              .includes(subscriberQuery.toLowerCase()),
           )
         : upcomingSubscribers,
     [subscriberQuery, upcomingSubscribers],
@@ -1226,6 +1243,17 @@ function UpcomingTab({
             label="Badge"
             value={draft.upcomingFormBadge}
             onChange={(v) => set("upcomingFormBadge", v)}
+          />
+          <Field
+            label="Name field label"
+            value={draft.upcomingFormNameLabel}
+            onChange={(v) => set("upcomingFormNameLabel", v)}
+          />
+          <Field
+            label="Name placeholder"
+            value={draft.upcomingFormNamePlaceholder}
+            onChange={(v) => set("upcomingFormNamePlaceholder", v)}
+            help="Keep this soft. The public field is optional to reduce friction."
           />
           <Field
             label="Email field label"
@@ -1373,7 +1401,7 @@ function UpcomingTab({
           <Field label="Signoff" value={upcomingEmail.signoff} onChange={(v) => setUpcomingEmail("signoff", v)} multiline />
           <Field label="Footer note" value={upcomingEmail.footer} onChange={(v) => setUpcomingEmail("footer", v)} multiline />
           <p className="mb-6 text-xs text-mute">
-            Dynamic fields: {"{{bookTitle}}"}, {"{{subheadline}}"}, {"{{footerText}}"}
+            Dynamic fields: {"{{firstName}}"}, {"{{bookTitle}}"}, {"{{subheadline}}"}, {"{{footerText}}"}
           </p>
           <SectionTitle title="Upcoming email colors" />
           <div className="grid sm:grid-cols-2 gap-3">
@@ -1414,7 +1442,7 @@ function UpcomingTab({
           <input
             value={subscriberQuery}
             onChange={(e) => setSubscriberQuery(e.target.value)}
-            placeholder="Search upcoming subscribers by email"
+            placeholder="Search upcoming subscribers by name or email"
             className="focus-rose w-full h-11 rounded-[10px] border border-blush-deep bg-input px-3.5 text-[15px] text-ink hover:border-rose/50 transition-colors mb-5"
           />
 
@@ -1428,6 +1456,7 @@ function UpcomingTab({
                 <thead>
                   <tr className="bg-blush/40 text-ink-soft text-left">
                     <th className="font-medium px-4 py-2.5">Email</th>
+                    <th className="font-medium px-4 py-2.5 hidden md:table-cell">Name</th>
                     <th className="font-medium px-4 py-2.5 hidden sm:table-cell">Joined</th>
                     <th className="font-medium px-4 py-2.5 w-16" />
                   </tr>
@@ -1436,6 +1465,9 @@ function UpcomingTab({
                   {filteredUpcomingSubscribers.map((s) => (
                     <tr key={s.email} className="border-t border-blush-deep/40">
                       <td className="px-4 py-3 text-ink truncate">{s.email}</td>
+                      <td className="px-4 py-3 text-mute hidden md:table-cell truncate">
+                        {s.name || "-"}
+                      </td>
                       <td className="px-4 py-3 text-mute hidden sm:table-cell">
                         {new Date(s.createdAt).toLocaleString()}
                       </td>

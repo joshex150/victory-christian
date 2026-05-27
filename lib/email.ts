@@ -10,7 +10,9 @@ function getResend(): Resend | null {
 
 const FROM = process.env.RESEND_FROM_EMAIL || "No Guide to Womanhood <onboarding@resend.dev>";
 
-function welcomeHTML(content: SiteContent, template: EmailTemplate) {
+type EmailContent = SiteContent & { firstName?: string };
+
+function welcomeHTML(content: EmailContent, template: EmailTemplate) {
   const eyebrow = escapedField(template.eyebrow, content);
   const heading = escapedField(template.heading, content);
   const subtitle = escapedField(template.subtitle, content);
@@ -45,7 +47,7 @@ function welcomeHTML(content: SiteContent, template: EmailTemplate) {
 </html>`;
 }
 
-function welcomeText(content: SiteContent, template: EmailTemplate) {
+function welcomeText(content: EmailContent, template: EmailTemplate) {
   return [
     fillTemplate(template.eyebrow, content),
     fillTemplate(template.heading, content),
@@ -64,6 +66,7 @@ export async function sendWelcomeEmail(
   email: string,
   content: SiteContent,
   template: EmailTemplate,
+  firstName?: string,
 ) {
   const resend = getResend();
   if (!resend) {
@@ -73,9 +76,9 @@ export async function sendWelcomeEmail(
     const result = await resend.emails.send({
       from: FROM,
       to: email,
-      subject: fillTemplate(template.subject, content),
-      html: welcomeHTML(content, template),
-      text: welcomeText(content, template),
+      subject: fillTemplate(template.subject, { ...content, firstName }),
+      html: welcomeHTML({ ...content, firstName }, template),
+      text: welcomeText({ ...content, firstName }, template),
     });
     if (result.error) {
       return { ok: false, skipped: false as const, error: result.error.message };
@@ -95,7 +98,7 @@ function escapeHTML(s: string) {
     .replace(/'/g, "&#39;");
 }
 
-function escapedField(value: string, content: SiteContent) {
+function escapedField(value: string, content: EmailContent) {
   return escapeHTML(fillTemplate(value, content));
 }
 

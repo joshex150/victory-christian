@@ -9,6 +9,8 @@ type Props = {
   buttonText: string;
   privacyNote: string;
   badge: string;
+  nameLabel: string;
+  namePlaceholder: string;
   emailLabel: string;
   placeholder: string;
   loadingText: string;
@@ -28,6 +30,8 @@ export default function WaitlistForm({
   privacyNote,
   list = "main",
   badge,
+  nameLabel,
+  namePlaceholder,
   emailLabel,
   placeholder,
   loadingText,
@@ -36,6 +40,7 @@ export default function WaitlistForm({
   networkErrorMessage,
   genericErrorMessage,
 }: Props) {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -56,7 +61,7 @@ export default function WaitlistForm({
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, list }),
+        body: JSON.stringify({ name, email, list }),
       });
       const data = (await res.json()) as { success: boolean; message: string };
       if (!res.ok || !data.success) {
@@ -68,6 +73,7 @@ export default function WaitlistForm({
       setStatus("success");
       setMessage(data.message);
       toast.success(data.message);
+      setName("");
       setEmail("");
     } catch {
       setStatus("error");
@@ -78,6 +84,7 @@ export default function WaitlistForm({
 
   const isLoading = status === "loading";
   const isSuccess = status === "success";
+  const nameId = `${list}-name`;
   const emailId = `${list}-email`;
   const helpId = `${list}-email-help`;
 
@@ -103,11 +110,40 @@ export default function WaitlistForm({
       <p className="mt-2 text-center text-mute text-sm sm:text-[15px]">{microcopy}</p>
 
       <form onSubmit={onSubmit} noValidate className="mt-7 sm:mt-8">
+        <label htmlFor={nameId} className="sr-only">
+          {nameLabel}
+        </label>
         <label htmlFor={emailId} className="sr-only">
           {emailLabel}
         </label>
 
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 items-stretch">
+        <div className="grid gap-3 sm:grid-cols-[0.72fr_1fr_auto] sm:gap-2 items-stretch">
+          <div className="relative">
+            <span aria-hidden className="absolute left-4 top-1/2 -translate-y-1/2 text-rose-deep/60">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21a8 8 0 0 0-16 0" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </span>
+            <input
+              id={nameId}
+              name="name"
+              type="text"
+              autoComplete="given-name"
+              placeholder={namePlaceholder}
+              value={name}
+              maxLength={80}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (status !== "idle") setStatus("idle");
+              }}
+              disabled={isLoading || isSuccess}
+              className="focus-rose w-full h-12 sm:h-[52px] rounded-[12px] border border-blush-deep
+                         bg-input pl-11 pr-4 text-[15px] text-ink placeholder:text-mute/70
+                         transition-colors duration-200
+                         hover:border-rose/50 disabled:opacity-60 disabled:cursor-not-allowed"
+            />
+          </div>
           <div className="relative flex-1">
             <span aria-hidden className="absolute left-4 top-1/2 -translate-y-1/2 text-rose-deep/60">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

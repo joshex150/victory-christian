@@ -17,9 +17,9 @@ export async function GET(req: Request) {
   const list = await getSubscribers(subscriberList);
 
   if (format === "csv") {
-    const header = "email,createdAt\n";
+    const header = "name,email,createdAt\n";
     const body = list
-      .map((s) => `${escapeCSV(s.email)},${escapeCSV(s.createdAt)}`)
+      .map((s) => `${escapeCSV(s.name ?? "")},${escapeCSV(s.email)},${escapeCSV(s.createdAt)}`)
       .join("\n");
     return new NextResponse(header + body, {
       status: 200,

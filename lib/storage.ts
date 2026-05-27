@@ -23,6 +23,8 @@ export type SiteContent = {
   formHeading: string;
   formMicrocopy: string;
   formBadge: string;
+  formNameLabel: string;
+  formNamePlaceholder: string;
   formEmailLabel: string;
   formPlaceholder: string;
   buttonText: string;
@@ -56,6 +58,8 @@ export type SiteContent = {
   upcomingFormHeading: string;
   upcomingFormMicrocopy: string;
   upcomingFormBadge: string;
+  upcomingFormNameLabel: string;
+  upcomingFormNamePlaceholder: string;
   upcomingFormEmailLabel: string;
   upcomingFormPlaceholder: string;
   upcomingButtonText: string;
@@ -86,6 +90,8 @@ export type UpcomingBook = {
   formHeading: string;
   formMicrocopy: string;
   formBadge: string;
+  formNameLabel: string;
+  formNamePlaceholder: string;
   formEmailLabel: string;
   formPlaceholder: string;
   buttonText: string;
@@ -119,6 +125,8 @@ It's not a guide to being a woman, but the clarity you wish you had earlier. Bec
   formHeading: "Be first to get it when it drops.",
   formMicrocopy: "No spam, just early access.",
   formBadge: "Waitlist",
+  formNameLabel: "First name",
+  formNamePlaceholder: "First name (optional)",
   formEmailLabel: "Email address",
   formPlaceholder: "you@yourname.com",
   buttonText: "Sign up today",
@@ -150,6 +158,8 @@ It's not a guide to being a woman, but the clarity you wish you had earlier. Bec
   upcomingFormHeading: "Be first to know when it drops.",
   upcomingFormMicrocopy: "Join the early-access list for this upcoming title.",
   upcomingFormBadge: "Upcoming",
+  upcomingFormNameLabel: "First name",
+  upcomingFormNamePlaceholder: "First name (optional)",
   upcomingFormEmailLabel: "Email address",
   upcomingFormPlaceholder: "you@yourname.com",
   upcomingButtonText: "Notify me",
@@ -168,6 +178,7 @@ It's not a guide to being a woman, but the clarity you wish you had earlier. Bec
 export type SubscriberList = "main" | `book:${string}`;
 
 export type Subscriber = {
+  name?: string;
   email: string;
   createdAt: string;
   ip?: string | null;
@@ -185,6 +196,9 @@ type CoverDoc = {
   contentType: string;
   updatedAt: Date;
 };
+
+const LEGACY_MAIN_EMAIL_INTRO = "Thank you for joining the waitlist.";
+const LEGACY_UPCOMING_EMAIL_INTRO = "Thank you for joining the early-access list.";
 
 function subscribersCollection(list: SubscriberList) {
   if (list === "main") return "subscribers";
@@ -233,6 +247,8 @@ function legacyUpcomingBook(content: SiteContent): UpcomingBook | null {
     formHeading: content.upcomingFormHeading,
     formMicrocopy: content.upcomingFormMicrocopy,
     formBadge: content.upcomingFormBadge,
+    formNameLabel: content.upcomingFormNameLabel,
+    formNamePlaceholder: content.upcomingFormNamePlaceholder,
     formEmailLabel: content.upcomingFormEmailLabel,
     formPlaceholder: content.upcomingFormPlaceholder,
     buttonText: content.upcomingButtonText,
@@ -251,8 +267,24 @@ function legacyUpcomingBook(content: SiteContent): UpcomingBook | null {
 function normaliseUpcomingBook(book: UpcomingBook): UpcomingBook {
   return {
     ...book,
-    emailTemplate: { ...DEFAULT_EMAIL_TEMPLATE, ...book.emailTemplate },
+    emailTemplate: normaliseEmailTemplate(
+      book.emailTemplate,
+      DEFAULT_UPCOMING_EMAIL_TEMPLATE,
+      LEGACY_UPCOMING_EMAIL_INTRO,
+    ),
   };
+}
+
+function normaliseEmailTemplate(
+  template: Partial<EmailTemplate> | undefined,
+  defaults: EmailTemplate,
+  legacyIntro: string,
+): EmailTemplate {
+  const next = { ...defaults, ...template };
+  if (!template?.intro || template.intro === legacyIntro) {
+    next.intro = defaults.intro;
+  }
+  return next;
 }
 
 /* -------- content -------- */
@@ -264,10 +296,11 @@ export async function getContent(): Promise<SiteContent> {
   const { _id, ...rest } = doc;
   void _id;
   const content: SiteContent = { ...DEFAULT_CONTENT, ...rest };
-  content.upcomingEmailTemplate = {
-    ...DEFAULT_UPCOMING_EMAIL_TEMPLATE,
-    ...rest.upcomingEmailTemplate,
-  };
+  content.upcomingEmailTemplate = normaliseEmailTemplate(
+    rest.upcomingEmailTemplate,
+    DEFAULT_UPCOMING_EMAIL_TEMPLATE,
+    LEGACY_UPCOMING_EMAIL_INTRO,
+  );
   if (Array.isArray(rest.upcomingBooks)) {
     content.upcomingBooks = rest.upcomingBooks
       .filter((book) => isBookId(book.id))
@@ -316,7 +349,7 @@ export async function getEmailTemplate(): Promise<EmailTemplate> {
   if (!doc) return { ...DEFAULT_EMAIL_TEMPLATE };
   const { _id, ...rest } = doc;
   void _id;
-  return { ...DEFAULT_EMAIL_TEMPLATE, ...rest };
+  return normaliseEmailTemplate(rest, DEFAULT_EMAIL_TEMPLATE, LEGACY_MAIN_EMAIL_INTRO);
 }
 
 export async function saveEmailTemplate(template: EmailTemplate): Promise<EmailTemplate> {
@@ -350,17 +383,24 @@ export async function addSubscriber(
   const db = await getDb();
   const col = db.collection<SubscriberDoc>(subscribersCollection(list));
   const email = entry.email.toLowerCase();
+  const { name, ...entryWithoutName } = entry;
   try {
-    if (list !== "main" && list !== "book:upcoming") {
-      await col.createIndex({ email: 1 }, { unique: true });
-      await col.createIndex({ createdAt: -1 });
-    }
-    await col.insertOne({ ...entry, email, list });
+    const result = await col.updateOne(
+      { email },
+      {
+        $setOnInsert: { ...entryWithoutName, email, list },
+        ...(name ? { $set: { name } } : {}),
+      },
+      { upsert: true },
+    );
     const total = await col.countDocuments();
-    return { added: true, total };
+    return { added: result.upsertedCount > 0, total };
   } catch (err) {
     const e = err as { code?: number };
     if (e?.code === 11000) {
+      if (name) {
+        await col.updateOne({ email }, { $set: { name } });
+      }
       const total = await col.countDocuments();
       return { added: false, total };
     }
@@ -374,7 +414,7 @@ export async function removeSubscriber(
 ): Promise<number> {
   const db = await getDb();
   const col = db.collection<SubscriberDoc>(subscribersCollection(list));
-  await col.deleteOne({ email: email.toLowerCase() });
+  await col.deleteMany({ email: email.toLowerCase() });
   return col.countDocuments();
 }
 

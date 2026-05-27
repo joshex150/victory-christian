@@ -23,7 +23,10 @@ function clientPromise(): Promise<MongoClient> {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 10_000,
     });
-    global._mongoClientPromise = client.connect();
+    global._mongoClientPromise = client.connect().catch((err) => {
+      global._mongoClientPromise = undefined;
+      throw err;
+    });
   }
   return global._mongoClientPromise;
 }

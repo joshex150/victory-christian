@@ -6,6 +6,7 @@ import { sendWelcomeEmail } from "@/lib/email";
 export const runtime = "nodejs";
 
 const Body = z.object({
+  name: z.string().trim().max(80).optional(),
   email: z.string().trim().toLowerCase().email("Please enter a valid email address."),
   list: z.enum(["main", "upcoming"]).optional(),
 });
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
     }
 
     const { email, list = "main" } = parsed.data;
+    const name = parsed.data.name?.trim() || undefined;
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("x-real-ip") ||
@@ -59,6 +61,7 @@ export async function POST(req: Request) {
     const ua = req.headers.get("user-agent");
     const result = await addSubscriber(
       {
+        ...(name ? { name } : {}),
         email,
         createdAt: new Date().toISOString(),
         ip,
@@ -85,7 +88,7 @@ export async function POST(req: Request) {
           };
     const template =
       list === "main" ? await getEmailTemplate() : content.upcomingEmailTemplate;
-    const mail = await sendWelcomeEmail(email, emailContent, template);
+    const mail = await sendWelcomeEmail(email, emailContent, template, name);
     if (!mail.ok && !mail.skipped) {
       console.warn(`[waitlist:${list}] welcome email failed:`, mail.error);
     }

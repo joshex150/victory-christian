@@ -95,6 +95,8 @@ export default function UpcomingSection({ content }: { content: SiteContent }) {
               buttonText={content.upcomingButtonText}
               privacyNote={content.upcomingPrivacyNote}
               badge={content.upcomingFormBadge}
+              nameLabel={content.upcomingFormNameLabel}
+              namePlaceholder={content.upcomingFormNamePlaceholder}
               emailLabel={content.upcomingFormEmailLabel}
               placeholder={content.upcomingFormPlaceholder}
               loadingText={content.upcomingFormLoadingText}

@@ -95,6 +95,8 @@ export default async function Home() {
             buttonText={content.buttonText}
             privacyNote={content.privacyNote}
             badge={content.formBadge}
+            nameLabel={content.formNameLabel}
+            namePlaceholder={content.formNamePlaceholder}
             emailLabel={content.formEmailLabel}
             placeholder={content.formPlaceholder}
             loadingText={content.formLoadingText}
