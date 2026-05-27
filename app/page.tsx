@@ -1,15 +1,66 @@
 import LandingHero from "@/components/LandingHero";
 import UpcomingSection from "@/components/UpcomingSection";
 import WaitlistForm from "@/components/WaitlistForm";
+import { getSeoText, getSiteUrl, SITE_NAME } from "@/lib/site";
 import { getContent } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const content = await getContent();
+  const homeUrl = new URL("/", getSiteUrl()).toString();
+  const authorName = content.author.replace(/^by\s+/i, "").trim();
+  const seo = getSeoText(content);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${homeUrl}#organization`,
+        name: SITE_NAME,
+        url: homeUrl,
+        logo: new URL("/icon-512.png", homeUrl).toString(),
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${homeUrl}#website`,
+        name: SITE_NAME,
+        url: homeUrl,
+        publisher: { "@id": `${homeUrl}#organization` },
+        inLanguage: "en",
+      },
+      {
+        "@type": "WebPage",
+        "@id": `${homeUrl}#webpage`,
+        name: seo.title,
+        description: seo.description,
+        url: homeUrl,
+        isPartOf: { "@id": `${homeUrl}#website` },
+        about: { "@id": `${homeUrl}#book` },
+        inLanguage: "en",
+      },
+      {
+        "@type": "Book",
+        "@id": `${homeUrl}#book`,
+        name: content.bookTitle,
+        description: seo.description,
+        url: homeUrl,
+        publisher: { "@id": `${homeUrl}#organization` },
+        ...(authorName && authorName.toLowerCase() !== "the author"
+          ? { author: { "@type": "Person", name: authorName } }
+          : {}),
+      },
+    ],
+  };
 
   return (
     <main className="paper-grain relative min-h-screen overflow-hidden bg-cream">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
       {/* Ambient pink orbs */}
       <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
         <div className="orb orb-a -top-32 -left-24 h-[420px] w-[420px] bg-blush" />
