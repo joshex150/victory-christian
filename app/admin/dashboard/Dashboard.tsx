@@ -41,6 +41,7 @@ export default function Dashboard({
   const [savingEmail, setSavingEmail] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingUpcoming, setUploadingUpcoming] = useState(false);
+  const [removingSubscriber, setRemovingSubscriber] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const upcomingFileRef = useRef<HTMLInputElement>(null);
 
@@ -212,21 +213,29 @@ export default function Dashboard({
   }
 
   async function removeSub(email: string, list: "main" | "upcoming" = "main") {
-    if (!confirm(`Remove ${email}?`)) return;
-    const res = await fetch("/api/admin/subscribers", {
-      method: "DELETE",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, list }),
-    });
-    if (res.ok) {
+    const removalKey = `${list}:${email}`;
+    setRemovingSubscriber(removalKey);
+    try {
+      const res = await fetch("/api/admin/subscribers", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, list }),
+      });
+      const data = (await res.json()) as { success?: boolean; message?: string };
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Could not remove subscriber.");
+        return;
+      }
       if (list === "upcoming") {
         setUpcomingSubscribers((l) => l.filter((s) => s.email !== email));
       } else {
         setSubscribers((l) => l.filter((s) => s.email !== email));
       }
       toast.success("Removed.");
-    } else {
-      toast.error("Could not remove.");
+    } catch {
+      toast.error("Network error while removing subscriber.");
+    } finally {
+      setRemovingSubscriber((current) => (current === removalKey ? null : current));
     }
   }
 
@@ -378,6 +387,7 @@ export default function Dashboard({
             upcomingSubscribers={upcomingSubscribers}
             onRefreshUpcoming={() => refreshSubscribers("upcoming")}
             onRemoveUpcoming={(email) => removeSub(email, "upcoming")}
+            removingSubscriber={removingSubscriber}
           />
         )}
 
@@ -386,6 +396,7 @@ export default function Dashboard({
             subscribers={subscribers}
             onRefresh={() => refreshSubscribers("main")}
             onRemove={(email) => removeSub(email, "main")}
+            removingSubscriber={removingSubscriber}
           />
         )}
       </div>
@@ -978,10 +989,12 @@ function SubscribersTab({
   subscribers,
   onRefresh,
   onRemove,
+  removingSubscriber,
 }: {
   subscribers: Subscriber[];
   onRefresh: () => void;
   onRemove: (email: string) => void;
+  removingSubscriber: string | null;
 }) {
   const [q, setQ] = useState("");
   const filtered = useMemo(
@@ -1053,12 +1066,10 @@ function SubscribersTab({
                     {new Date(s.createdAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => onRemove(s.email)}
-                      className="text-rose-deep hover:underline text-xs"
-                    >
-                      Remove
-                    </button>
+                    <RemoveButton
+                      removing={removingSubscriber === `main:${s.email}`}
+                      onRemove={() => onRemove(s.email)}
+                    />
                   </td>
                 </tr>
               ))}
@@ -1086,6 +1097,7 @@ function UpcomingTab({
   upcomingSubscribers,
   onRefreshUpcoming,
   onRemoveUpcoming,
+  removingSubscriber,
 }: {
   draft: SiteContent;
   content: SiteContent;
@@ -1102,6 +1114,7 @@ function UpcomingTab({
   upcomingSubscribers: Subscriber[];
   onRefreshUpcoming: () => void;
   onRemoveUpcoming: (email: string) => void;
+  removingSubscriber: string | null;
 }) {
   function set<K extends keyof SiteContent>(key: K, value: SiteContent[K]) {
     setDraft({ ...draft, [key]: value });
@@ -1427,12 +1440,10 @@ function UpcomingTab({
                         {new Date(s.createdAt).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => onRemoveUpcoming(s.email)}
-                          className="text-rose-deep hover:underline text-xs"
-                        >
-                          Remove
-                        </button>
+                        <RemoveButton
+                          removing={removingSubscriber === `upcoming:${s.email}`}
+                          onRemove={() => onRemoveUpcoming(s.email)}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -1542,6 +1553,38 @@ function UpcomingTab({
 }
 
 /* ------------------- bits ------------------- */
+
+function RemoveButton({
+  removing,
+  onRemove,
+}: {
+  removing: boolean;
+  onRemove: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <button
+      type="button"
+      disabled={removing}
+      onBlur={() => {
+        if (!removing) setConfirming(false);
+      }}
+      onClick={() => {
+        if (confirming) {
+          onRemove();
+        } else {
+          setConfirming(true);
+        }
+      }}
+      className={`text-xs hover:underline disabled:cursor-wait disabled:opacity-60 ${
+        confirming ? "font-medium text-wine" : "text-rose-deep"
+      }`}
+    >
+      {removing ? "Removing..." : confirming ? "Confirm" : "Remove"}
+    </button>
+  );
+}
 
 function SectionTitle({
   title,

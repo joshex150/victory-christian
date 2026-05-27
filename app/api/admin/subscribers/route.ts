@@ -49,8 +49,16 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: false, message: "Email required" }, { status: 400 });
   }
   const list = json.list === "upcoming" ? bookSubscriberList("upcoming") : "main";
-  const total = await removeSubscriber(email, list);
-  return NextResponse.json({ success: true, total });
+  try {
+    const total = await removeSubscriber(email, list);
+    return NextResponse.json({ success: true, total });
+  } catch (err) {
+    console.error("[subscribers:delete] failed:", err);
+    return NextResponse.json(
+      { success: false, message: "Could not remove subscriber." },
+      { status: 500 },
+    );
+  }
 }
 
 function escapeCSV(v: string) {
