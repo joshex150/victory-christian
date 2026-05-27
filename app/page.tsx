@@ -43,6 +43,14 @@ export default async function Home() {
             microcopy={content.formMicrocopy}
             buttonText={content.buttonText}
             privacyNote={content.privacyNote}
+            badge={content.formBadge}
+            emailLabel={content.formEmailLabel}
+            placeholder={content.formPlaceholder}
+            loadingText={content.formLoadingText}
+            submittedText={content.formSubmittedText}
+            invalidEmailMessage={content.formInvalidEmailMessage}
+            networkErrorMessage={content.formNetworkErrorMessage}
+            genericErrorMessage={content.formGenericErrorMessage}
           />
         </div>
 
@@ -59,9 +67,9 @@ export default async function Home() {
             © {new Date().getFullYear()} {content.bookTitle}
           </p>
           <p className="mt-4 text-[11px] tracking-[0.18em] uppercase text-mute/80">
-            <span>Built by </span>
+            <span>{content.footerCreditLabel} </span>
             <a
-              href="https://yeantech.com"
+              href={content.footerCreditUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-medium text-rose-deep
@@ -72,7 +80,7 @@ export default async function Home() {
                 aria-hidden
                 className="inline-block h-1.5 w-1.5 rounded-full bg-rose-deep"
               />
-              Yean Technologies
+              {content.footerCreditName}
             </a>
           </p>
         </footer>

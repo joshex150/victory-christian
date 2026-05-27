@@ -3,6 +3,10 @@ import type { SiteContent } from "@/lib/storage";
 
 export default function LandingHero({ content }: { content: SiteContent }) {
   const paragraphs = content.body.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const accent = content.headlineAccent.trim();
+  const accentIndex = accent
+    ? content.headline.toLowerCase().indexOf(accent.toLowerCase())
+    : -1;
 
   return (
     <header className="relative">
@@ -29,27 +33,31 @@ export default function LandingHero({ content }: { content: SiteContent }) {
               fontVariationSettings: "'opsz' 144, 'SOFT' 50",
             }}
           >
-            You learned the{" "}
-            <span className="relative inline-block italic text-rose-deep">
-              hard way
-              <svg
-                aria-hidden
-                viewBox="0 0 200 14"
-                className="absolute left-0 -bottom-2 w-full h-3"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M2 8 C 40 2, 90 14, 198 6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </span>
-            .
-            <br />
-            Not anymore.
+            {accentIndex >= 0 ? (
+              <>
+                {content.headline.slice(0, accentIndex)}
+                <span className="relative inline-block italic text-rose-deep">
+                  {content.headline.slice(accentIndex, accentIndex + accent.length)}
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 200 14"
+                    className="absolute left-0 -bottom-2 w-full h-3"
+                    preserveAspectRatio="none"
+                  >
+                    <path
+                      d="M2 8 C 40 2, 90 14, 198 6"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                {content.headline.slice(accentIndex + accent.length)}
+              </>
+            ) : (
+              content.headline
+            )}
           </h1>
 
           <p
@@ -65,17 +73,21 @@ export default function LandingHero({ content }: { content: SiteContent }) {
             ))}
           </div>
 
-          <div className="reveal reveal-delay-5 mt-8 flex items-center gap-3 text-mute">
-            <span className="h-px w-10 bg-rose-deep/40" />
-            <span
-              className="font-serif italic text-ink"
-              style={{ fontFamily: "var(--font-serif)" }}
-            >
-              {content.bookTitle}
-            </span>
-            {content.author && (
-              <span className="text-mute text-sm">— {content.author}</span>
-            )}
+          <div className="reveal reveal-delay-5 mt-10 flex items-start gap-4 max-w-[58ch]">
+            <div className="min-w-0 border-l border-blush-deep/70 pl-4 sm:pl-5">
+              <span
+                className="block font-serif italic text-[19px] leading-[1.45] text-ink sm:text-[21px]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                {content.bookTitle}
+              </span>
+              {content.author && (
+                <span className="mt-2.5 inline-flex items-center gap-2 text-sm text-mute">
+                  <span aria-hidden className="h-px w-5 bg-rose-deep/35" />
+                  {content.author}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -84,6 +96,8 @@ export default function LandingHero({ content }: { content: SiteContent }) {
           <BookCover
             title={content.bookTitle}
             author={content.author}
+            eyebrow={content.coverEyebrow}
+            edition={content.coverEdition}
             image={content.coverImage}
           />
         </div>
@@ -94,6 +108,8 @@ export default function LandingHero({ content }: { content: SiteContent }) {
         <BookCover
           title={content.bookTitle}
           author={content.author}
+          eyebrow={content.coverEyebrow}
+          edition={content.coverEdition}
           image={content.coverImage}
         />
       </div>

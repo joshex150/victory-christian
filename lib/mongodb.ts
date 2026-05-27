@@ -32,8 +32,7 @@ let indexesEnsured = false;
 
 export async function getDb(): Promise<Db> {
   const client = await clientPromise();
-  // If MONGODB_DB is set, use it; otherwise fall back to the db named in the URI path.
-  const db = dbName ? client.db(dbName) : client.db();
+  const db = client.db(dbName || "noguide");
   if (!indexesEnsured) {
     indexesEnsured = true;
     await Promise.all([

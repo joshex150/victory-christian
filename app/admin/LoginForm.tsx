@@ -47,7 +47,7 @@ export default function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="focus-rose w-full h-11 rounded-[10px] border border-blush-deep bg-white px-3.5 text-[15px] text-ink hover:border-rose/50 transition-colors"
+          className="focus-rose w-full h-11 rounded-[10px] border border-blush-deep bg-input px-3.5 text-[15px] text-ink hover:border-rose/50 transition-colors"
         />
       </div>
       <div>
@@ -61,13 +61,13 @@ export default function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="focus-rose w-full h-11 rounded-[10px] border border-blush-deep bg-white px-3.5 text-[15px] text-ink hover:border-rose/50 transition-colors"
+          className="focus-rose w-full h-11 rounded-[10px] border border-blush-deep bg-input px-3.5 text-[15px] text-ink hover:border-rose/50 transition-colors"
         />
       </div>
       <button
         type="submit"
         disabled={loading}
-        className="w-full h-11 rounded-[10px] bg-rose-deep hover:bg-wine text-white text-[15px] font-medium shadow-[0_10px_24px_-10px_rgba(176,44,84,0.7)] transition-colors disabled:opacity-70"
+        className="shadow-action w-full h-11 rounded-[10px] bg-button hover:bg-button-hover text-button-text text-[15px] font-medium transition-colors disabled:opacity-70"
       >
         {loading ? "Signing in…" : "Sign in"}
       </button>

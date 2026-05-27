@@ -8,8 +8,15 @@ type Props = {
   microcopy: string;
   buttonText: string;
   privacyNote: string;
+  badge: string;
+  emailLabel: string;
+  placeholder: string;
+  loadingText: string;
+  submittedText: string;
+  invalidEmailMessage: string;
+  networkErrorMessage: string;
+  genericErrorMessage: string;
   list?: "main" | "upcoming";
-  badge?: string;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,7 +27,14 @@ export default function WaitlistForm({
   buttonText,
   privacyNote,
   list = "main",
-  badge = "Waitlist",
+  badge,
+  emailLabel,
+  placeholder,
+  loadingText,
+  submittedText,
+  invalidEmailMessage,
+  networkErrorMessage,
+  genericErrorMessage,
 }: Props) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -32,8 +46,8 @@ export default function WaitlistForm({
 
     if (!EMAIL_RE.test(email)) {
       setStatus("error");
-      setMessage("Please enter a valid email address.");
-      toast.error("Please enter a valid email address.");
+      setMessage(invalidEmailMessage);
+      toast.error(invalidEmailMessage);
       return;
     }
 
@@ -47,8 +61,8 @@ export default function WaitlistForm({
       const data = (await res.json()) as { success: boolean; message: string };
       if (!res.ok || !data.success) {
         setStatus("error");
-        setMessage(data.message || "Something went wrong. Try again.");
-        toast.error(data.message || "Something went wrong. Try again.");
+        setMessage(data.message || genericErrorMessage);
+        toast.error(data.message || genericErrorMessage);
         return;
       }
       setStatus("success");
@@ -57,28 +71,30 @@ export default function WaitlistForm({
       setEmail("");
     } catch {
       setStatus("error");
-      setMessage("Network error. Please try again.");
-      toast.error("Network error. Please try again.");
+      setMessage(networkErrorMessage);
+      toast.error(networkErrorMessage);
     }
   }
 
   const isLoading = status === "loading";
   const isSuccess = status === "success";
+  const emailId = `${list}-email`;
+  const helpId = `${list}-email-help`;
 
   return (
     <section
-      aria-labelledby="waitlist-heading"
-      className="relative mt-14 sm:mt-16 rounded-[22px] border border-blush-deep/60 bg-white/80 backdrop-blur-md
-                 shadow-[0_24px_80px_-32px_rgba(176,44,84,0.25)]
+      aria-labelledby={`${list}-waitlist-heading`}
+      className="relative mt-14 sm:mt-16 rounded-[22px] border border-blush-deep/60 bg-surface/80 backdrop-blur-md
+                 shadow-panel
                  p-7 sm:p-9 md:p-10"
     >
       {/* decorative top tag */}
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-rose text-white text-[10px] tracking-[0.28em] uppercase font-medium shadow-[0_8px_20px_-6px_rgba(212,69,106,0.55)]">
+      <div className="shadow-badge absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-badge text-badge-text text-[10px] tracking-[0.28em] uppercase font-medium">
         {badge}
       </div>
 
       <h2
-        id="waitlist-heading"
+        id={`${list}-waitlist-heading`}
         className="font-serif text-2xl sm:text-3xl md:text-[34px] leading-[1.15] text-ink text-center"
         style={{ fontFamily: "var(--font-serif)" }}
       >
@@ -87,8 +103,8 @@ export default function WaitlistForm({
       <p className="mt-2 text-center text-mute text-sm sm:text-[15px]">{microcopy}</p>
 
       <form onSubmit={onSubmit} noValidate className="mt-7 sm:mt-8">
-        <label htmlFor="email" className="sr-only">
-          Email address
+        <label htmlFor={emailId} className="sr-only">
+          {emailLabel}
         </label>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 items-stretch">
@@ -100,13 +116,13 @@ export default function WaitlistForm({
               </svg>
             </span>
             <input
-              id="email"
+              id={emailId}
               name="email"
               type="email"
               inputMode="email"
               autoComplete="email"
               required
-              placeholder="you@yourname.com"
+              placeholder={placeholder}
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -114,9 +130,9 @@ export default function WaitlistForm({
               }}
               disabled={isLoading || isSuccess}
               aria-invalid={status === "error"}
-              aria-describedby="email-help"
+              aria-describedby={helpId}
               className="focus-rose w-full h-12 sm:h-[52px] rounded-[12px] border border-blush-deep
-                         bg-white pl-11 pr-4 text-[15px] text-ink placeholder:text-mute/70
+                         bg-input pl-11 pr-4 text-[15px] text-ink placeholder:text-mute/70
                          transition-colors duration-200
                          hover:border-rose/50 disabled:opacity-60 disabled:cursor-not-allowed"
             />
@@ -125,20 +141,20 @@ export default function WaitlistForm({
           <button
             type="submit"
             disabled={isLoading || isSuccess}
-            className="group relative h-12 sm:h-[52px] px-6 sm:px-7 rounded-[12px] font-medium text-[15px] text-white
-                       bg-rose-deep hover:bg-wine active:translate-y-[1px]
+            className="group relative h-12 sm:h-[52px] px-6 sm:px-7 rounded-[12px] font-medium text-[15px] text-button-text
+                       bg-button hover:bg-button-hover active:translate-y-[1px]
                        transition-all duration-200
-                       shadow-[0_10px_24px_-10px_rgba(176,44,84,0.7)]
+                       shadow-action
                        focus-rose disabled:opacity-70 disabled:cursor-not-allowed
                        flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>
-                <Spinner /> Sending…
+                <Spinner /> {loadingText}
               </>
             ) : isSuccess ? (
               <>
-                <Check /> You're in
+                <Check /> {submittedText}
               </>
             ) : (
               <>
@@ -164,7 +180,7 @@ export default function WaitlistForm({
         </div>
 
         <p
-          id="email-help"
+          id={helpId}
           aria-live="polite"
           className={`mt-3 text-center text-[13px] min-h-[20px] ${
             status === "error"

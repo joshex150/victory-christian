@@ -9,6 +9,8 @@ A single-page Next.js 15 / React 19 / Tailwind 4 landing page for an upcoming eB
 - **Auto welcome email** via [Resend](https://resend.com) on every signup
 - **Admin panel** at `/admin`:
   - Edit headline, body, form copy, footer (with live preview)
+  - Customize site and component colors with live theme preview
+  - Design the welcome email copy and palette with live email preview
   - Upload or link a book cover image (stored in Mongo, served via `/api/cover`)
   - View / search / export / delete subscribers (CSV)
 - **MongoDB storage** — works on Vercel, Railway, Fly, anywhere
@@ -68,7 +70,7 @@ Database `noguide`:
 
 | Collection      | Doc shape                                                                 |
 | --------------- | ------------------------------------------------------------------------- |
-| `meta`          | Single `{ _id: "site", ...SiteContent }` doc with all editable copy       |
+| `meta`          | `{ _id: "site" }`, `{ _id: "theme" }`, and `{ _id: "email-template" }` settings docs |
 | `subscribers`   | `{ email, createdAt, ip, ua }` — unique index on `email`                  |
 | `assets`        | Single `{ _id: "cover", data: Binary, contentType, updatedAt }` for cover |
 
@@ -82,7 +84,7 @@ app/
   api/cover/route.ts             # Serves the cover image from Mongo
   admin/page.tsx                 # Admin login
   admin/dashboard/page.tsx       # Protected admin dashboard
-  api/admin/*                    # Login / logout / content / upload / subscribers
+  api/admin/*                    # Login / logout / content / theme / email / assets / subscribers
 components/
   LandingHero.tsx
   WaitlistForm.tsx
@@ -90,6 +92,7 @@ components/
 lib/
   mongodb.ts                     # Cached Mongo client (serverless-safe)
   storage.ts                     # Content / subscribers / cover persistence
+  settings.ts                    # Theme and email template defaults / variable mapping
   auth.ts                        # JWT session + cookie helpers
   email.ts                       # Resend welcome email
 middleware.ts                    # Protects /admin/dashboard

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
-import { getContent, getSubscribers } from "@/lib/storage";
+import { getContent, getEmailTemplate, getSiteTheme, getSubscribers } from "@/lib/storage";
 import Dashboard from "./Dashboard";
 
 export const dynamic = "force-dynamic";
@@ -9,8 +9,10 @@ export default async function DashboardPage() {
   const session = await getServerSession();
   if (!session) redirect("/admin");
 
-  const [content, subscribers, upcomingSubscribers] = await Promise.all([
+  const [content, theme, emailTemplate, subscribers, upcomingSubscribers] = await Promise.all([
     getContent(),
+    getSiteTheme(),
+    getEmailTemplate(),
     getSubscribers("main"),
     getSubscribers("upcoming"),
   ]);
@@ -19,6 +21,8 @@ export default async function DashboardPage() {
     <Dashboard
       adminEmail={session.email}
       initialContent={content}
+      initialTheme={theme}
+      initialEmailTemplate={emailTemplate}
       initialSubscribers={subscribers}
       initialUpcomingSubscribers={upcomingSubscribers}
     />

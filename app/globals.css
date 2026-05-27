@@ -10,6 +10,15 @@
   --color-ink: #1a1014;
   --color-ink-soft: #3a2a30;
   --color-mute: #76636a;
+  --color-surface: #ffffff;
+  --color-button: #b02c54;
+  --color-button-hover: #6e1532;
+  --color-button-text: #ffffff;
+  --color-badge: #d4456a;
+  --color-badge-text: #ffffff;
+  --color-input: #ffffff;
+  --color-cover-bg: #ffffff;
+  --color-cover-accent: #fbeef0;
 
   --font-serif: "Fraunces", "Cormorant Garamond", "Playfair Display", ui-serif, Georgia, serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -22,7 +31,7 @@
 }
 
 html, body {
-  background: #ffffff;
+  background: var(--color-cream);
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -36,7 +45,7 @@ html, body {
 
 ::selection {
   background: var(--color-rose);
-  color: #fff;
+  color: var(--color-button-text);
 }
 
 /* Soft paper grain over the page */
@@ -108,7 +117,92 @@ html, body {
 /* Custom focus ring */
 .focus-rose:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(212, 69, 106, 0.25), 0 0 0 1px var(--color-rose);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-rose) 25%, transparent),
+    0 0 0 1px var(--color-rose);
+}
+
+/* Site-colored Sonner notifications */
+.site-toaster[data-sonner-toaster][data-theme="light"] {
+  --normal-bg: var(--color-toast-bg, var(--color-surface));
+  --normal-border: var(--color-toast-border, var(--color-blush-deep));
+  --normal-text: var(--color-toast-text, var(--color-ink-soft));
+  --success-bg: var(--color-toast-bg, var(--color-blush));
+  --success-border: var(--color-toast-border, var(--color-blush-deep));
+  --success-text: var(--color-toast-text, var(--color-wine));
+  --info-bg: var(--color-toast-bg, var(--color-cream));
+  --info-border: var(--color-toast-border, var(--color-blush-deep));
+  --info-text: var(--color-toast-text, var(--color-rose-deep));
+  --warning-bg: var(--color-toast-bg, var(--color-blush));
+  --warning-border: var(--color-toast-border, var(--color-rose));
+  --warning-text: var(--color-toast-text, var(--color-wine));
+  --error-bg: var(--color-toast-bg, var(--color-blush));
+  --error-border: var(--color-toast-border, var(--color-rose));
+  --error-text: var(--color-toast-text, var(--color-rose-deep));
+  --border-radius: 12px;
+  font-family: var(--font-sans);
+}
+
+.site-toaster [data-sonner-toast][data-styled="true"] {
+  gap: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 14px 32px -18px color-mix(in srgb, var(--color-toast-text) 38%, transparent),
+    0 4px 12px color-mix(in srgb, var(--color-toast-text) 8%, transparent);
+}
+
+@media (max-width: 600px) {
+  .site-toaster[data-sonner-toaster][data-x-position="center"] {
+    left: 50%;
+    right: auto;
+    width: min(calc(100vw - 32px), 332px);
+    transform: translateX(-50%);
+  }
+
+  .site-toaster[data-sonner-toaster] [data-sonner-toast] {
+    left: 0;
+    right: auto;
+    width: 100%;
+  }
+
+  .site-toaster [data-sonner-toast][data-styled="true"] {
+    gap: 8px;
+    padding: 11px 13px;
+  }
+}
+
+.themed-book-cover {
+  background: radial-gradient(ellipse at top left, var(--color-cover-accent), transparent 55%),
+    radial-gradient(ellipse at bottom right, var(--color-blush-deep), transparent 60%),
+    linear-gradient(160deg, var(--color-cover-bg), var(--color-cover-accent));
+}
+
+.themed-book-pages {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-cover-bg), var(--color-ink) 10%) 0%,
+    var(--color-cover-bg) 45%,
+    color-mix(in srgb, var(--color-cover-bg), var(--color-ink) 10%) 100%
+  );
+}
+
+.shadow-panel {
+  box-shadow: 0 24px 80px -32px color-mix(in srgb, var(--color-rose-deep) 25%, transparent);
+}
+
+.shadow-action {
+  box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--color-button) 70%, transparent);
+}
+
+.shadow-badge {
+  box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--color-badge) 55%, transparent);
+}
+
+.shadow-book-floor {
+  background-color: color-mix(in srgb, var(--color-rose-deep) 30%, transparent);
+}
+
+.shadow-book {
+  box-shadow: 0 30px 80px -20px color-mix(in srgb, var(--color-rose-deep) 45%, transparent),
+    0 8px 20px -6px rgba(0, 0, 0, 0.25);
 }
 
 /* Marquee tape for subscribers strip */

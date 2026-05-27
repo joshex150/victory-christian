@@ -31,7 +31,7 @@ export default async function AdminLoginPage() {
             <p className="mt-2 text-mute text-sm">Sign in to manage your launch.</p>
           </div>
 
-          <div className="rounded-[20px] border border-blush-deep/60 bg-white/85 backdrop-blur-md p-7 sm:p-8 shadow-[0_24px_80px_-32px_rgba(176,44,84,0.25)]">
+          <div className="shadow-panel rounded-[20px] border border-blush-deep/60 bg-surface/85 backdrop-blur-md p-7 sm:p-8">
             <LoginForm />
           </div>
 

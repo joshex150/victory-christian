@@ -3,29 +3,29 @@
 type Props = {
   title: string;
   author: string;
+  eyebrow: string;
+  edition: string;
   image?: string;
 };
 
-export default function BookCover({ title, author, image }: Props) {
+export default function BookCover({ title, author, eyebrow, edition, image }: Props) {
   return (
     <div className="relative inline-block book-float [transform-style:preserve-3d]">
       {/* drop shadow underneath */}
       <div
         aria-hidden
-        className="absolute -bottom-10 left-1/2 -translate-x-1/2 h-10 w-[78%] rounded-[50%] bg-rose-deep/30 blur-2xl"
+        className="shadow-book-floor absolute -bottom-10 left-1/2 -translate-x-1/2 h-10 w-[78%] rounded-[50%] blur-2xl"
       />
 
       {/* page edges (right side stack) */}
       <div
         aria-hidden
-        className="absolute top-1.5 right-[-6px] bottom-1.5 w-[6px] rounded-r-[4px]
-                   bg-[linear-gradient(90deg,#ece1d8_0%,#fff_45%,#ece1d8_100%)]
+        className="themed-book-pages absolute top-1.5 right-[-6px] bottom-1.5 w-[6px] rounded-r-[4px]
                    shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]"
       />
 
       <div
-        className="relative w-[230px] sm:w-[270px] md:w-[300px] aspect-[2/3] rounded-[6px] overflow-hidden
-                   shadow-[0_30px_80px_-20px_rgba(110,21,50,0.45),0_8px_20px_-6px_rgba(0,0,0,0.25)]
+        className="shadow-book relative w-[230px] sm:w-[270px] md:w-[300px] aspect-[2/3] rounded-[6px] overflow-hidden
                    ring-1 ring-black/5"
       >
         {image ? (
@@ -33,7 +33,7 @@ export default function BookCover({ title, author, image }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={image}
-              alt={`${title} — cover`}
+              alt={title}
               className="absolute inset-0 h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-br from-black/0 via-black/0 to-black/20" />
@@ -44,13 +44,13 @@ export default function BookCover({ title, author, image }: Props) {
           </>
         ) : (
           <>
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,#fbeef0,transparent_55%),radial-gradient(ellipse_at_bottom_right,#f4d7dd,transparent_60%),linear-gradient(160deg,#fff,#fbeef0)]" />
+            <div className="themed-book-cover absolute inset-0" />
             {/* spine highlight */}
             <div className="absolute inset-y-0 left-0 w-[10px] bg-gradient-to-r from-rose-deep/30 to-transparent" />
             <div className="absolute inset-0 p-5 flex flex-col justify-between">
               <div>
                 <div className="text-[10px] tracking-[0.32em] uppercase text-rose-deep font-medium">
-                  An eBook
+                  {eyebrow}
                 </div>
                 <div className="mt-2 h-px w-10 bg-rose-deep/60" />
               </div>
@@ -66,7 +66,7 @@ export default function BookCover({ title, author, image }: Props) {
                 </div>
               </div>
               <div className="text-[10px] tracking-[0.3em] uppercase text-mute">
-                Waitlist edition
+                {edition}
               </div>
             </div>
             {/* gloss */}
