@@ -42,6 +42,7 @@ export default function Dashboard({
   const [uploading, setUploading] = useState(false);
   const [uploadingUpcoming, setUploadingUpcoming] = useState(false);
   const [removingSubscriber, setRemovingSubscriber] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const upcomingFileRef = useRef<HTMLInputElement>(null);
 
@@ -245,7 +246,7 @@ export default function Dashboard({
       <header className="sticky top-0 z-30 backdrop-blur-md bg-surface/75 border-b border-blush-deep/60">
         <div className="mx-auto max-w-[1180px] px-5 sm:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="shadow-action h-8 w-8 rounded-lg bg-gradient-to-br from-rose to-button-hover flex items-center justify-center text-button-text font-serif text-lg">
+            <div className="shadow-action h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-rose to-button-hover flex items-center justify-center text-button-text font-serif text-lg">
               N
             </div>
             <div className="min-w-0">
@@ -255,7 +256,7 @@ export default function Dashboard({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             <a
               href="/"
               target="_blank"
@@ -269,15 +270,120 @@ export default function Dashboard({
             </a>
             <button
               onClick={logout}
-              className="h-9 px-3 rounded-[10px] border border-blush-deep bg-surface text-sm text-ink-soft hover:border-rose/50 transition-colors"
+              className="hidden sm:flex h-9 px-3 rounded-[10px] border border-blush-deep bg-surface text-sm text-ink-soft hover:border-rose/50 transition-colors"
             >
               Sign out
             </button>
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+              className="sm:hidden h-9 w-9 flex items-center justify-center rounded-[10px] border border-blush-deep bg-surface text-ink-soft hover:border-rose/50 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="8" x2="20" y2="8" /><line x1="4" y1="16" x2="20" y2="16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Sticky tab strip — always visible under the header bar */}
+        <div className="overflow-x-auto no-scrollbar border-t border-blush-deep/40 bg-surface/60">
+          <div className="mx-auto max-w-[1180px] px-4 sm:px-7 flex gap-0.5 py-1.5">
+            {(
+              [
+                ["content", "Write-up"],
+                ["cover", "Book cover"],
+                ["theme", "Theme"],
+                ["email", "Email"],
+                ["upcoming", "Upcoming"],
+                ["subscribers", "Subscribers"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`shrink-0 px-3.5 sm:px-5 h-8 rounded-[8px] text-[13px] sm:text-sm font-medium whitespace-nowrap transition-all ${
+                  tab === key
+                    ? "shadow-action bg-button text-button-text"
+                    : "text-ink-soft hover:text-ink hover:bg-blush/50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1180px] px-5 sm:px-8 py-8 sm:py-10">
+      {/* Mobile slide-in menu */}
+      {mobileMenuOpen && (
+        <div className="sm:hidden fixed inset-0 z-50 flex justify-end">
+          <div
+            className="flex-1 bg-ink/40 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="w-[280px] max-w-[85vw] bg-surface flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-5 h-16 border-b border-blush-deep/60 shrink-0">
+              <span className="font-semibold text-ink text-sm">Menu</span>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="h-9 w-9 flex items-center justify-center rounded-[10px] text-mute hover:text-ink hover:bg-blush/50 transition-colors"
+                aria-label="Close menu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+            <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+              {(
+                [
+                  ["content", "Write-up"],
+                  ["cover", "Book cover"],
+                  ["theme", "Theme"],
+                  ["email", "Email"],
+                  ["upcoming", "Upcoming book"],
+                  ["subscribers", "Subscribers"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => { setTab(key); setMobileMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-3 rounded-[10px] text-sm font-medium transition-colors ${
+                    tab === key
+                      ? "bg-button text-button-text"
+                      : "text-ink-soft hover:bg-blush/50 hover:text-ink"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+            <div className="border-t border-blush-deep/60 p-4 space-y-1 shrink-0">
+              <a
+                href="/"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 w-full px-4 py-2.5 rounded-[10px] text-sm text-ink-soft hover:bg-blush/50 hover:text-ink transition-colors"
+              >
+                View site
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 17 17 7" /><path d="M7 7h10v10" />
+                </svg>
+              </a>
+              <button
+                onClick={() => { void logout(); setMobileMenuOpen(false); }}
+                className="flex items-center gap-2 w-full px-4 py-2.5 rounded-[10px] text-sm text-ink-soft hover:bg-blush/50 hover:text-ink transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto max-w-[1180px] px-5 sm:px-8 pt-8 sm:pt-10 pb-24 lg:pb-10">
         {/* Greeting */}
         <div className="mb-8">
           <h1
@@ -290,32 +396,6 @@ export default function Dashboard({
             You have <span className="text-rose-deep font-semibold">{subscribers.length}</span>{" "}
             {subscribers.length === 1 ? "subscriber" : "subscribers"} on the waitlist.
           </p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex w-full overflow-x-auto no-scrollbar sm:w-auto sm:inline-flex p-1 rounded-[12px] border border-blush-deep bg-surface/70 backdrop-blur-md mb-6">
-          {(
-            [
-              ["content", "Write-up"],
-              ["cover", "Book cover"],
-              ["theme", "Theme"],
-              ["email", "Email"],
-              ["upcoming", "Upcoming book"],
-              ["subscribers", "Subscribers"],
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`shrink-0 px-4 sm:px-5 h-9 rounded-[9px] text-sm font-medium transition-all ${
-                tab === key
-                  ? "shadow-action bg-button text-button-text"
-                  : "text-ink-soft hover:text-ink"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
         </div>
 
         {tab === "content" && (
@@ -575,7 +655,7 @@ function ContentTab({
         />
       </div>
 
-      <aside className="lg:sticky lg:top-24 self-start">
+      <aside className="lg:sticky lg:top-[116px] self-start">
         <div className="rounded-[18px] border border-blush-deep/60 bg-gradient-to-br from-blush/50 to-surface p-6">
           <div className="text-[11px] tracking-[0.24em] uppercase text-rose-deep mb-3">Live preview</div>
           <div className="rounded-[14px] bg-surface p-5 border border-blush-deep/50">
@@ -819,7 +899,7 @@ function ThemeTab({
         </div>
       </div>
 
-      <aside className="lg:sticky lg:top-24 self-start">
+      <aside className="lg:sticky lg:top-[116px] self-start">
         <div
           style={themeStyle(draft)}
           className="overflow-hidden rounded-[18px] border border-blush-deep bg-cream"
@@ -944,7 +1024,7 @@ function EmailTemplateTab({
         </div>
       </div>
 
-      <aside className="lg:sticky lg:top-24 self-start">
+      <aside className="lg:sticky lg:top-[116px] self-start">
         <div
           className="rounded-[18px] border border-blush-deep/60 p-4 sm:p-5"
           style={{ background: draft.background }}
@@ -1060,8 +1140,8 @@ function SubscribersTab({
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[12px] border border-blush-deep/60">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-[12px] border border-blush-deep/60">
+          <table className="w-full min-w-[400px] text-sm">
             <thead>
               <tr className="bg-blush/40 text-ink-soft text-left">
                 <th className="font-medium px-4 py-2.5">Email</th>
@@ -1073,7 +1153,7 @@ function SubscribersTab({
             <tbody>
               {filtered.map((s) => (
                 <tr key={s.email} className="border-t border-blush-deep/40">
-                  <td className="px-4 py-3 text-ink truncate">{s.email}</td>
+                  <td className="px-4 py-3 text-ink max-w-[200px] truncate">{s.email}</td>
                   <td className="px-4 py-3 text-mute hidden md:table-cell truncate">
                     {s.name || "-"}
                   </td>
@@ -1451,8 +1531,8 @@ function UpcomingTab({
               {upcomingSubscribers.length === 0 ? "No upcoming-list subscribers yet." : "No matches."}
             </p>
           ) : (
-            <div className="overflow-hidden rounded-[12px] border border-blush-deep/60">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-[12px] border border-blush-deep/60">
+              <table className="w-full min-w-[400px] text-sm">
                 <thead>
                   <tr className="bg-blush/40 text-ink-soft text-left">
                     <th className="font-medium px-4 py-2.5">Email</th>
@@ -1464,7 +1544,7 @@ function UpcomingTab({
                 <tbody>
                   {filteredUpcomingSubscribers.map((s) => (
                     <tr key={s.email} className="border-t border-blush-deep/40">
-                      <td className="px-4 py-3 text-ink truncate">{s.email}</td>
+                      <td className="px-4 py-3 text-ink max-w-[200px] truncate">{s.email}</td>
                       <td className="px-4 py-3 text-mute hidden md:table-cell truncate">
                         {s.name || "-"}
                       </td>
@@ -1486,7 +1566,7 @@ function UpcomingTab({
         </div>
       </div>
 
-      <aside className="lg:sticky lg:top-24 self-start space-y-5">
+      <aside className="lg:sticky lg:top-[116px] self-start space-y-5">
         <div className="rounded-[18px] border border-blush-deep/60 bg-gradient-to-br from-blush/50 to-surface p-6">
           <div className="text-[11px] tracking-[0.24em] uppercase text-rose-deep mb-5 text-center">
             Live preview
@@ -1713,27 +1793,49 @@ function SaveBar({
   onSave: () => void;
   onReset: () => void;
 }) {
+  const label = dirty ? "You have unsaved changes." : "All changes saved.";
   return (
-    <div className="mt-5 flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] border border-blush-deep/60 bg-surface/85 backdrop-blur-md">
-      <span className="text-xs text-mute">
-        {dirty ? "You have unsaved changes." : "All changes saved."}
-      </span>
-      <div className="flex gap-2">
-        <button
-          onClick={onReset}
-          disabled={!dirty || saving}
-          className="h-9 px-3 rounded-[10px] border border-blush-deep bg-surface text-sm text-ink-soft hover:border-rose/50 transition-colors disabled:opacity-50"
-        >
-          Discard
-        </button>
-        <button
-          onClick={onSave}
-          disabled={!dirty || saving}
-          className="shadow-action h-9 px-4 rounded-[10px] bg-button text-button-text text-sm font-medium hover:bg-button-hover transition-colors disabled:opacity-50"
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
+    <>
+      {/* Mobile: fixed bar pinned to bottom of viewport */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex items-center justify-between gap-3 px-4 py-3 border-t border-blush-deep/60 bg-surface/95 backdrop-blur-md">
+        <span className="text-xs text-mute truncate">{label}</span>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={onReset}
+            disabled={!dirty || saving}
+            className="h-9 px-3 rounded-[10px] border border-blush-deep bg-surface text-sm text-ink-soft hover:border-rose/50 transition-colors disabled:opacity-50"
+          >
+            Discard
+          </button>
+          <button
+            onClick={onSave}
+            disabled={!dirty || saving}
+            className="shadow-action h-9 px-4 rounded-[10px] bg-button text-button-text text-sm font-medium hover:bg-button-hover transition-colors disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
-    </div>
+      {/* Desktop: inline inside the aside */}
+      <div className="hidden lg:flex mt-5 items-center justify-between gap-3 px-4 py-3 rounded-[14px] border border-blush-deep/60 bg-surface/85 backdrop-blur-md">
+        <span className="text-xs text-mute">{label}</span>
+        <div className="flex gap-2">
+          <button
+            onClick={onReset}
+            disabled={!dirty || saving}
+            className="h-9 px-3 rounded-[10px] border border-blush-deep bg-surface text-sm text-ink-soft hover:border-rose/50 transition-colors disabled:opacity-50"
+          >
+            Discard
+          </button>
+          <button
+            onClick={onSave}
+            disabled={!dirty || saving}
+            className="shadow-action h-9 px-4 rounded-[10px] bg-button text-button-text text-sm font-medium hover:bg-button-hover transition-colors disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
